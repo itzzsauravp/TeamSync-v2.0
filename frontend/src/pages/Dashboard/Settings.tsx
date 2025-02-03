@@ -64,8 +64,7 @@ const Settings: React.FC<SettingsProps> = () => {
     e.preventDefault();
     try {
       const data = await updateUserInformation(updatedUserInfo);
-      const { success } = data;
-      if (success) {
+      if (data.success) {
         toast.success("Your credentials were changed successfully!");
         localStorage.removeItem("token");
         navigate("/");
@@ -79,8 +78,7 @@ const Settings: React.FC<SettingsProps> = () => {
     e.preventDefault();
     try {
       const data = await deleteUser();
-      const { success } = data;
-      if (success) {
+      if (data.success) {
         toast.success("Your account was deleted successfully!");
         localStorage.removeItem("token");
         navigate("/");
@@ -91,37 +89,36 @@ const Settings: React.FC<SettingsProps> = () => {
   };
 
   return (
-    <section className="">
-      {" "}
-      {/* Changed the background color */}
-      <Card className="w-full max-w-xl shadow-lg rounded-lg bg-white">
+    <section className="py-10">
+      <Card className="max-w-xl mx-auto p-6">
         <CardHeader className="text-center">
-          <div className="h-32 w-32 rounded-full bg-royalBlue mx-auto mb-4">
-            {profilePicture && (
+          <div className="h-32 w-32 mx-auto mb-4 overflow-hidden rounded-full bg-royalBlue">
+            {profilePicture ? (
               <img
                 src={profilePicture}
                 alt={username[0].toUpperCase()}
-                className="h-full w-full object-cover rounded-full"
+                className="h-full w-full object-cover"
               />
+            ) : (
+              <div className="flex items-center justify-center h-full w-full">
+                <span className="text-4xl text-white">
+                  {username[0].toUpperCase()}
+                </span>
+              </div>
             )}
           </div>
-          <CardTitle className="text-2xl font-bold text-gray-800">
-            {username}
-          </CardTitle>
+          <CardTitle className="text-2xl font-bold">{username}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleUserUpdate}>
             <div className="space-y-6">
               <div>
-                <h2 className="text-xl font-semibold text-gray-700 mb-4">
+                <h2 className="text-xl font-semibold mb-4">
                   General Information
                 </h2>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="flex flex-col gap-2">
-                    <label
-                      htmlFor="first_name"
-                      className="text-sm text-gray-600"
-                    >
+                    <label htmlFor="first_name" className="text-sm">
                       First Name
                     </label>
                     <Input
@@ -132,10 +129,7 @@ const Settings: React.FC<SettingsProps> = () => {
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <label
-                      htmlFor="last_name"
-                      className="text-sm text-gray-600"
-                    >
+                    <label htmlFor="last_name" className="text-sm">
                       Last Name
                     </label>
                     <Input
@@ -147,13 +141,13 @@ const Settings: React.FC<SettingsProps> = () => {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="gender" className="text-sm text-gray-600">
+                  <label htmlFor="gender" className="text-sm">
                     Gender
                   </label>
-                  <Input id="gender" value={gender} disabled={true} />
+                  <Input id="gender" value={gender} disabled />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="username" className="text-sm text-gray-600">
+                  <label htmlFor="username" className="text-sm">
                     Username
                   </label>
                   <Input
@@ -164,7 +158,7 @@ const Settings: React.FC<SettingsProps> = () => {
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="address" className="text-sm text-gray-600">
+                  <label htmlFor="address" className="text-sm">
                     Address
                   </label>
                   <Input
@@ -177,15 +171,12 @@ const Settings: React.FC<SettingsProps> = () => {
               </div>
 
               <div>
-                <h2 className="text-xl font-semibold text-gray-700 mb-4">
+                <h2 className="text-xl font-semibold mb-4">
                   Contact Information
                 </h2>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="flex flex-col gap-2">
-                    <label
-                      htmlFor="phone_number"
-                      className="text-sm text-gray-600"
-                    >
+                    <label htmlFor="phone_number" className="text-sm">
                       Phone Number
                     </label>
                     <Input
@@ -196,25 +187,16 @@ const Settings: React.FC<SettingsProps> = () => {
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <label htmlFor="email" className="text-sm text-gray-600">
+                    <label htmlFor="email" className="text-sm">
                       Email
                     </label>
-                    <Input
-                      id="email"
-                      value={updatedUserInfo.email}
-                      disabled={true}
-                    />
+                    <Input id="email" value={updatedUserInfo.email} disabled />
                   </div>
                 </div>
               </div>
 
               <div className="flex justify-between gap-4">
-                <Button
-                  variant="outline"
-                  onClick={(e) => {
-                    e.preventDefault();
-                  }}
-                >
+                <Button variant="outline" onClick={(e) => e.preventDefault()}>
                   Enable Edit
                 </Button>
                 <Button type="submit" className="text-white">
