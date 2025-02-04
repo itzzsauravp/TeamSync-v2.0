@@ -6,8 +6,8 @@ export type UserState = {
   profilePicture: string;
   email: string;
   gender: string;
-  firstName: string;
-  lastName: string;
+  first_name: string;
+  last_name: string;
   phoneNumber: string;
   address: string;
   isAuthenticated: boolean;
@@ -19,8 +19,8 @@ const initialState: UserState = {
   profilePicture: "",
   email: "",
   gender: "",
-  firstName: "",
-  lastName: "",
+  first_name: "",
+  last_name: "",
   phoneNumber: "",
   address: "",
   isAuthenticated: false,

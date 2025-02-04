@@ -3,9 +3,14 @@ import { useDispatch, useSelector } from "react-redux";
 import { setChatDetails, setLastMessage } from "@/store/chatSlice";
 import { selectUser } from "@/store/userSlice";
 import useSocketContext from "@/hooks/useSocketContext";
-import { formatDateAndTime } from "@/lib/utils";
+import { cn, formatDateAndTime } from "@/lib/utils";
 import { fetchUsers } from "@/api/userApi";
-import { createOneonOneGroup, fetchAllChatForUser } from "@/api/groupApi";
+import {
+  addUserToGroup,
+  createOneonOneGroup,
+  deleteGroup,
+  fetchAllChatForUser,
+} from "@/api/groupApi";
 import {
   getAllMessages,
   initialHiMessage,
@@ -35,7 +40,7 @@ import {
 } from "@/components/ui/tooltip";
 import { IoSend, IoSearch } from "react-icons/io5";
 import { BsThreeDotsVertical } from "react-icons/bs";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -51,6 +56,17 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useNavigate } from "react-router-dom";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { leaveGroup, removeMember } from "@/api/groupMemberApi";
 
 // Chat Interface Input Component
 interface ChatInterfaceInputProps {
@@ -214,7 +230,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ groupID }) => {
         ) : (
           messages.map((msg) => (
             <MessageBubble
-              key={msg.message_id}
+              key={`${"message-bubble" + msg.message_id}`}
               message={msg}
               isCurrentUser={msg.sender === username}
             />
@@ -226,29 +242,174 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ groupID }) => {
   );
 };
 
-// Chat Header Component
 interface ChatHeaderProps {
-  chatDetails: Chat;
+  chatDetails: {
+    group_id: string;
+    group_name: string;
+    is_direct_message: boolean;
+    chat_info: {
+      otherUser?: {
+        user_id: string;
+        username: string;
+        profilePicture?: string;
+      };
+      groupPicture?: string;
+      members?: Array<{
+        user_id: string;
+        username: string;
+        profilePicture?: string;
+        role: string;
+      }>;
+    };
+  };
 }
 
 const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
   const { group_name, is_direct_message, chat_info } = chatDetails;
   const { activeUsers } = useSocketContext();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  // Get current user from Redux
+  const currentUser = useSelector(selectUser);
+  const currentUserId = currentUser.user_id;
+
   const isOnline = is_direct_message
-    ? activeUsers.includes(chat_info.otherUser.user_id)
+    ? activeUsers.includes(chat_info.otherUser?.user_id)
     : false;
+
+  // Determine if the current user is an admin.
+  const isAdmin = (chat_info?.members || []).some(
+    (member) => member.user_id === currentUserId && member.role === "admin"
+  );
+
+  // Local state for dialogs, sheet, and member search
   const [open, setOpen] = useState(false);
+  const [addMembersOpen, setAddMembersOpen] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [users, setUsers] = useState<any[]>([]);
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
+
+  // ----- API Handler: Add Members -----
+  const handleAddMembers = async () => {
+    try {
+      await Promise.all(
+        selectedUsers.map((userId) =>
+          // Ensure you have implemented addUserToGroup in your API
+          addUserToGroup(chatDetails.group_id, userId)
+        )
+      );
+      const updatedChats = await fetchAllChatForUser();
+      const updatedChat = updatedChats.chats.find(
+        (c: any) => c.group_id === chatDetails.group_id
+      );
+      if (updatedChat) {
+        dispatch(setChatDetails(updatedChat));
+      }
+      setAddMembersOpen(false);
+      setSelectedUsers([]);
+    } catch (error) {
+      console.error("Error adding members:", error);
+    }
+  };
+
+  const searchUsers = async (query: string) => {
+    try {
+      const data = await fetchUsers({ username: query });
+      setUsers(data || []);
+    } catch (error) {
+      console.error("Error searching users:", error);
+    }
+  };
+
+  // ----- Group Leave / Delete Handlers -----
+  // For admin: show confirmation dialog for leaving (group deletion)
+  const handleAdminLeave = () => {
+    setConfirmLeaveOpen(true);
+  };
+
+  // For non-admin: leave group directly.
+  const handleMemberLeave = async () => {
+    try {
+      const response = await leaveGroup(chatDetails.group_id);
+      if (response.success) {
+        // Show a dialogue indicating successful leave.
+        setAlertMessage(response.message || "You have left the group.");
+        setAlertOpen(true);
+        setTimeout(() => {
+          setAlertOpen(false);
+          navigate("/dashboard/message");
+          window.location.reload();
+        }, 2000);
+      }
+    } catch (err) {
+      console.error("Error while leaving the group.", err);
+    }
+  };
+
+  // Confirm admin leave: if confirmed, call deleteGroup.
+  const confirmAdminLeave = async () => {
+    try {
+      const response = await deleteGroup(chatDetails.group_id);
+      if (response.success) {
+        setAlertMessage(response.message || "Group deleted successfully.");
+        setAlertOpen(true);
+        setConfirmLeaveOpen(false);
+        setTimeout(() => {
+          setAlertOpen(false);
+          navigate("/dashboard/message");
+          window.location.reload();
+        }, 2000);
+      }
+    } catch (err) {
+      console.error("Error while deleting the group.", err);
+      setConfirmLeaveOpen(false);
+    }
+  };
+
+  // ----- Member Removal Handler (for admin removing another member) -----
+  const handleRemoveMember = async (memberId: string) => {
+    try {
+      const response = await removeMember(chatDetails.group_id, memberId);
+      if (response.success) {
+        // If the API returns a deletion message (group deleted due to insufficient members)
+        if (response.message.toLowerCase().includes("deleted")) {
+          setAlertMessage(response.message);
+          setAlertOpen(true);
+          setTimeout(() => {
+            setAlertOpen(false);
+            navigate("/dashboard/message");
+            window.location.reload();
+          }, 2000);
+        } else {
+          // Otherwise, simply refresh chat details.
+          const updatedChats = await fetchAllChatForUser();
+          const updatedChat = updatedChats.chats.find(
+            (c: any) => c.group_id === chatDetails.group_id
+          );
+          if (updatedChat) {
+            dispatch(setChatDetails(updatedChat));
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error removing member:", err);
+    }
+  };
 
   return (
     <div className="border-b p-4 flex items-center justify-between bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      {/* Left Side: Avatar and Name */}
+      {/* Left Side: Avatar and Group/Chat Name */}
       <div className="flex items-center gap-3">
         <Avatar className="h-12 w-12">
           {is_direct_message ? (
             <>
-              <AvatarImage src={chat_info.otherUser.profilePicture} />
+              <AvatarImage src={chat_info.otherUser?.profilePicture} />
               <AvatarFallback>
-                {chat_info.otherUser.username[0]?.toUpperCase()}
+                {chat_info.otherUser?.username[0]?.toUpperCase()}
               </AvatarFallback>
             </>
           ) : (
@@ -260,7 +421,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
         </Avatar>
         <div>
           <h2 className="font-semibold">
-            {is_direct_message ? chat_info.otherUser.username : group_name}
+            {is_direct_message ? chat_info.otherUser?.username : group_name}
           </h2>
           {is_direct_message && (
             <Badge
@@ -273,7 +434,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
         </div>
       </div>
 
-      {/* Right Side: Options Button */}
+      {/* Right Side: Options Sheet */}
       <div className="flex items-center">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
@@ -293,42 +454,70 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
               {chatDetails.is_direct_message ? (
                 <div className="flex flex-col items-center gap-3 py-4">
                   <Avatar className="h-20 w-20">
-                    <AvatarImage
-                      src={chatDetails.chat_info.otherUser.profilePicture}
-                    />
+                    <AvatarImage src={chat_info.otherUser?.profilePicture} />
                     <AvatarFallback>
-                      {chatDetails.chat_info.otherUser.username[0]?.toUpperCase()}
+                      {chat_info.otherUser?.username[0]?.toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <h4 className="capitalize font-semibold text-xl">
-                    {chatDetails.chat_info.otherUser.username}
+                    {chat_info.otherUser?.username}
                   </h4>
-                  {/* Additional DM info can be added here */}
                 </div>
               ) : (
-                // Group Information
                 <>
                   <div className="flex flex-col items-center gap-3 py-4">
                     <Avatar className="h-20 w-20">
-                      <AvatarImage src={chatDetails.chat_info.groupPicture} />
+                      <AvatarImage src={chat_info.groupPicture} />
                       <AvatarFallback>
-                        {chatDetails.chat_info.group_name[0]?.toUpperCase()}
+                        {group_name[0]?.toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <h4 className="capitalize font-semibold text-xl">
-                      {chat_info.group_name}
+                      {group_name}
                     </h4>
-                    {/* Additional group info can be added here */}
                   </div>
-                  <div>
-                    <h3 className="text-lg font-medium">
-                      Members ({chatDetails.chat_info.members.length})
-                    </h3>
-                    <ScrollArea className="h-64 mt-4">
-                      {chatDetails.chat_info.members.map((member: any) => (
+                  <div className="w-full flex gap-2 mb-4">
+                    {isAdmin ? (
+                      <Button
+                        size="sm"
+                        onClick={handleAdminLeave}
+                        className="text-red-500 bg-white hover:bg-gray-100 border"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2 text-red-500" /> Delete
+                        Group
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={handleMemberLeave}
+                        variant="outline"
+                        className="px-3"
+                      >
+                        Leave Group
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      onClick={() => setAddMembersOpen(true)}
+                      variant="outline"
+                    >
+                      <Plus className="h-4 w-4 mr-2" /> Add Members
+                    </Button>
+                  </div>
+                  <h3 className="text-lg font-medium w-full">
+                    Members ({chat_info?.members?.length || 0})
+                  </h3>
+                  <ScrollArea className="h-fit">
+                    {(chat_info?.members || []).map(
+                      (member: any, index: number) => (
                         <div
-                          key={member.user_id}
-                          className="flex items-center gap-3 py-2"
+                          key={`member-${member.user_id}-${index}`}
+                          className={cn(
+                            "flex items-center gap-3 py-2 px-2 border-b last:border-b-0",
+                            member.user_id === currentUserId
+                              ? "bg-green-50"
+                              : ""
+                          )}
                         >
                           <Avatar className="h-10 w-10">
                             <AvatarImage src={member.profilePicture} />
@@ -336,32 +525,158 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
                               {member.username[0]?.toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                          <div>
+                          <div className="flex-1">
                             <h4 className="capitalize font-semibold">
                               {member.username}
                             </h4>
-                            <span className="text-sm text-muted-foreground">
+                            <span
+                              className={cn(
+                                "text-sm text-muted-foreground",
+                                member.role === "admin"
+                                  ? "font-bold"
+                                  : "font-normal"
+                              )}
+                            >
                               {member.role}
                             </span>
                           </div>
+                          <div className="flex gap-2">
+                            {member.user_id === currentUserId ? (
+                              <Button
+                                variant="outline"
+                                size="xs"
+                                className="px-3"
+                                onClick={handleMemberLeave}
+                              >
+                                Leave
+                              </Button>
+                            ) : (
+                              isAdmin && (
+                                <Button
+                                  variant="ghost"
+                                  size="xs"
+                                  onClick={() =>
+                                    handleRemoveMember(member.user_id)
+                                  }
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              )
+                            )}
+                          </div>
                         </div>
-                      ))}
-                    </ScrollArea>
-                  </div>
+                      )
+                    )}
+                  </ScrollArea>
                 </>
               )}
             </div>
           </SheetContent>
         </Sheet>
       </div>
+
+      {/* Add Members Dialog */}
+      <Dialog open={addMembersOpen} onOpenChange={setAddMembersOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add Members to Group</DialogTitle>
+            <DialogDescription>
+              Search and select users to add to this group.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="relative">
+              <IoSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search users..."
+                className="pl-9"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  searchUsers(e.target.value);
+                }}
+              />
+            </div>
+            <ScrollArea className="h-64 border rounded-md">
+              {users.map((user) => (
+                <div
+                  key={`search-user-${user.user_id}`}
+                  className="flex items-center p-2 hover:bg-muted cursor-pointer"
+                  onClick={() =>
+                    setSelectedUsers((prev) =>
+                      prev.includes(user.user_id)
+                        ? prev.filter((id) => id !== user.user_id)
+                        : [...prev, user.user_id]
+                    )
+                  }
+                >
+                  <Checkbox
+                    checked={selectedUsers.includes(user.user_id)}
+                    className="mr-2"
+                  />
+                  <Avatar className="h-8 w-8 mr-2">
+                    <AvatarImage src={user.profilePicture} />
+                    <AvatarFallback>{user.username[0]}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">{user.username}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {user.email}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </ScrollArea>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={handleAddMembers}
+              disabled={selectedUsers.length === 0}
+            >
+              Add Selected Members
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Alert Dialog for Notifications */}
+      <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Notification</AlertDialogTitle>
+            <AlertDialogDescription>{alertMessage}</AlertDialogDescription>
+          </AlertDialogHeader>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmation Dialog for Admin Leaving / Deleting Group */}
+      <AlertDialog open={confirmLeaveOpen} onOpenChange={setConfirmLeaveOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Group Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              You are an admin. Leaving the group will delete the group and
+              remove all members. Do you wish to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmLeaveOpen(false)}
+              className="mr-2"
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmAdminLeave}>Confirm</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
-
 // Chat Interface Component
 const ChatInterface: React.FC = () => {
   const { chatDetails } = useSelector((state: RootState) => state.chat);
-
   if (!chatDetails) return null;
 
   return (
@@ -375,19 +690,56 @@ const ChatInterface: React.FC = () => {
 
 // Chat List Item Component
 interface ChatListItemProps {
-  chat: Chat;
+  chat: {
+    group_id: string;
+    group_name: string;
+    is_direct_message: boolean;
+    chat_info: {
+      otherUser?: {
+        user_id: string;
+        username: string;
+        profilePicture?: string;
+      };
+      groupPicture?: string;
+      members?: Array<{
+        user_id: string;
+        username: string;
+        profilePicture?: string;
+        role: string;
+      }>;
+    };
+  };
   isActive?: boolean;
 }
 
 const ChatListItem: React.FC<ChatListItemProps> = ({ chat, isActive }) => {
   const dispatch: AppDispatch = useDispatch();
-  const { username } = useSelector(selectUser);
-  const { lastMessage } = useSelector((state: RootState) => state.chat);
   const { activeUsers } = useSocketContext();
+  const currentUser = useSelector(selectUser);
+  const currentUserId = currentUser.user_id;
+  const { lastMessage } = useSelector((state: RootState) => state.chat);
 
-  const isDM = chat.is_direct_message;
-  const otherUser = isDM ? chat.chat_info.otherUser : null;
-  const isOnline = activeUsers.includes(otherUser?.user_id || "");
+  // Calculate whether the chat should be treated as a DM:
+  const hasTwoMembers =
+    chat.chat_info.members && chat.chat_info.members.length === 2;
+  const computedIsDM = chat.is_direct_message || hasTwoMembers;
+
+  // For DM chats, derive the "other user" information.
+  let otherUser = chat.chat_info.otherUser;
+  if (computedIsDM && !otherUser && chat.chat_info.members) {
+    // If otherUser is not provided, look up the member whose id is not the current user.
+    otherUser = chat.chat_info.members.find(
+      (member) => member.user_id !== currentUserId
+    );
+  }
+
+  // Display name: if DM, use the other user's username; otherwise use the group's name.
+  const displayName =
+    computedIsDM && otherUser ? otherUser.username : chat.group_name;
+  // For DM, we consider the member count to be 2.
+  const memberCount = !computedIsDM ? chat.chat_info.members?.length : 2;
+
+  // Get the last message for this chat.
   const lastMsg = lastMessage[chat.group_id];
 
   return (
@@ -400,22 +752,34 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ chat, isActive }) => {
       <div className="flex items-center gap-3">
         <div className="relative">
           <Avatar className="h-12 w-12">
-            {isDM ? (
+            {computedIsDM ? (
               <>
                 <AvatarImage src={otherUser?.profilePicture} />
-                <AvatarFallback>{otherUser?.username[0]}</AvatarFallback>
+                <AvatarFallback>
+                  {otherUser?.username[0]?.toUpperCase()}
+                </AvatarFallback>
               </>
             ) : (
-              <AvatarFallback>{chat.group_name[0]}</AvatarFallback>
+              <>
+                <AvatarImage src={chat.chat_info.groupPicture} />
+                <AvatarFallback>{chat.group_name[0]}</AvatarFallback>
+              </>
             )}
           </Avatar>
-          {isDM && isOnline && (
+          {computedIsDM && activeUsers.includes(otherUser?.user_id || "") && (
             <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
           )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex justify-between items-start">
-            <h3 className="font-semibold truncate">{chat.group_name}</h3>
+            <h3 className="font-semibold truncate">
+              {displayName}
+              {!computedIsDM && (
+                <span className="text-xs text-muted-foreground ml-2">
+                  ({memberCount} members)
+                </span>
+              )}
+            </h3>
             {lastMsg?.sent_at && (
               <span className="text-xs text-muted-foreground ml-2">
                 {formatDateAndTime(lastMsg.sent_at)}
@@ -423,7 +787,7 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ chat, isActive }) => {
             )}
           </div>
           <p className="text-sm text-muted-foreground truncate">
-            {lastMsg?.sender === username ? "You: " : ""}
+            {lastMsg?.sender === currentUser.username ? "You: " : ""}
             {lastMsg?.message_content || "No messages yet"}
           </p>
         </div>
@@ -447,7 +811,7 @@ const UserListItem: React.FC<UserListItemProps> = ({ user, onChatCreated }) => {
   );
   const dispatch = useDispatch();
   const isOnline = activeUsers.includes(user.user_id);
-
+  const navigate = useNavigate();
   const handleSendMessage = async (message: string) => {
     setIsLoading(true);
     try {
@@ -488,13 +852,15 @@ const UserListItem: React.FC<UserListItemProps> = ({ user, onChatCreated }) => {
       const messageResponse = await initialHiMessage(
         newChat.group_id,
         user.user_id,
-        message
+        customMessage
       );
 
       if (!messageResponse.success) {
         throw new Error("Message sent but failed to update server");
       }
 
+      navigate("/dashboard/message");
+      window.location.reload();
       // 5. Update with real message data
       dispatch(
         setLastMessage({
@@ -720,7 +1086,7 @@ const ChatList: React.FC = () => {
             {users.length > 0 ? (
               users.map((user) => (
                 <UserListItem
-                  key={user.user_id}
+                  key={`${"user-item" + user.user_id}`}
                   user={user}
                   onChatCreated={() => {
                     // Refresh chats after creation

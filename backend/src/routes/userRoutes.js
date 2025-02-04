@@ -11,9 +11,9 @@ const {
   deleteUserProfile,
 } = new UserController();
 
-userRouter.get("/all", getAllUsers);
-userRouter.post("/username", getSpecificUser);
-userRouter.get("/profile/:userId", getUserProfile);
+userRouter.get("/all", authenticateJWT, getAllUsers);
+userRouter.post("/username", authenticateJWT, getSpecificUser);
+userRouter.get("/profile/:userId", authenticateJWT, getUserProfile);
 userRouter.put("/profile", authenticateJWT, updateUserProfile);
 userRouter.delete("/delete", authenticateJWT, deleteUserProfile);
 

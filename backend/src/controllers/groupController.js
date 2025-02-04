@@ -73,6 +73,20 @@ class GroupController {
         });
       }
 
+      const isAlreadyInGroup = await GroupMembers.findOne({
+        where: {
+          group_id: groupId,
+          user_id: userId,
+        },
+      });
+
+      if (isAlreadyInGroup) {
+        return res.json({
+          success: false,
+          message: "User is already a member of this group",
+        });
+      }
+
       await GroupMembers.create({ group_id: groupId, user_id: userId });
       res.json({ success: true, message: "User added to group" });
     } catch (err) {
@@ -224,6 +238,59 @@ class GroupController {
         message: "Failed to fetch user chats",
         error:
           process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
+    }
+  };
+
+  deleteGroup = async (req, res) => {
+    const { groupId } = req.params;
+    const userId = req.user.user_id;
+
+    if (!groupId) {
+      return res.status(400).json({
+        success: false,
+        message: "Group ID is required",
+      });
+    }
+
+    try {
+      const group = await Groups.findOne({ where: { group_id: groupId } });
+
+      if (!group) {
+        return res.status(404).json({
+          success: false,
+          message: "Group not found",
+        });
+      }
+
+      const isAdmin = await GroupMembers.findOne({
+        where: {
+          group_id: groupId,
+          user_id: userId,
+          role: "admin",
+        },
+      });
+
+      if (!isAdmin) {
+        return res.status(403).json({
+          success: false,
+          message: "Only an admin can delete this group",
+        });
+      }
+
+      await Messages.destroy({ where: { group_id: groupId } });
+      await GroupMembers.destroy({ where: { group_id: groupId } });
+      await Groups.destroy({ where: { group_id: groupId } });
+
+      return res.json({
+        success: true,
+        message: "Group deleted successfully",
+      });
+    } catch (err) {
+      console.error("Error deleting group:", err);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to delete group",
       });
     }
   };

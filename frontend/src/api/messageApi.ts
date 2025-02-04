@@ -1,6 +1,10 @@
 import axiosInstance from "./axiosInstance";
 
-const initialHiMessage = async (group_id, targetUserId) => {
+const initialHiMessage = async (
+  group_id: string,
+  targetUserId: string,
+  messageContent: null | string = null
+) => {
   try {
     const responseInitial = await axiosInstance.get(
       `/user/profile/${targetUserId}`
@@ -9,7 +13,8 @@ const initialHiMessage = async (group_id, targetUserId) => {
     const username = data.user.username;
     const response = await axiosInstance.post("/message/send", {
       groupID: group_id,
-      messageContent: `Hey!! ${username} Lets connect and talk`,
+      messageContent:
+        messageContent || `Hey!! ${username} Lets connect and talk`,
     });
     return response.data;
   } catch (err) {
@@ -20,7 +25,7 @@ const initialHiMessage = async (group_id, targetUserId) => {
   }
 };
 
-const sendMessage = async (groupID, messageContent) => {
+const sendMessage = async (groupID: string, messageContent: string) => {
   try {
     const response = await axiosInstance.post("/message/send", {
       groupID,

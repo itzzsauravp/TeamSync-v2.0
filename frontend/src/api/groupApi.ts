@@ -8,7 +8,7 @@ const fetchAllGroups = async () => {
     console.error("There was an error while fetching all groups", err);
   }
 };
-const createOneonOneGroup = async (userId) => {
+const createOneonOneGroup = async (userId: string) => {
   try {
     const response = await axiosInstance.post("/group/one-on-one", {
       targetUserId: userId,
@@ -19,7 +19,7 @@ const createOneonOneGroup = async (userId) => {
   }
 };
 
-const createGroupChat = async (groupName) => {
+const createGroupChat = async (groupName: string) => {
   const response = await axiosInstance.post("/group/create", { groupName });
   return response.data;
 };
@@ -41,15 +41,30 @@ const fetchAllChatForUser = async () => {
   }
 };
 
-const addUserToGroup = async (groupId, userId) => {
+const addUserToGroup = async (groupId: string, userId: string) => {
   try {
     const response = await axiosInstance.post("/group/add", {
       groupId,
       userId,
     });
-    return response.data;
+    const { data } = response;
+    if (data.success) {
+      return response;
+    } else {
+      throw new Error();
+    }
   } catch {
     console.error("Error while adding user to the group");
+  }
+};
+
+const deleteGroup = async (groupId: string) => {
+  try {
+    const { data } = await axiosInstance.delete(`/group/delete/${groupId}`);
+    return data;
+  } catch (err) {
+    console.error("Error deleting group:", err);
+    return { success: false };
   }
 };
 
@@ -59,4 +74,5 @@ export {
   createGroupChat,
   fetchAllChatForUser,
   addUserToGroup,
+  deleteGroup,
 };
