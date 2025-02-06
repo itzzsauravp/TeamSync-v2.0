@@ -1,6 +1,7 @@
 import GroupMembers from "../models/GroupMembers.js";
 import Groups from "../models/Groups.js";
 import { Op } from "@sequelize/core";
+import Users from "../models/Users.js";
 
 class GroupMembersController {
   // Endpoint for a user to leave a group.
@@ -129,6 +130,50 @@ class GroupMembersController {
       return res
         .status(500)
         .json({ success: false, message: "Internal server error." });
+    }
+  };
+
+  getAdminGroups = async (req, res) => {
+    const currentUserId = req.user.user_id;
+    try {
+      // Find all membership records where the current user is an admin.
+      // Eager load the associated group, and for each group load all members along with their user details.
+      const adminMemberships = await GroupMembers.findAll({
+        where: { user_id: currentUserId, role: "admin" },
+        include: [
+          {
+            // Assuming you have set up an alias "group" in your associations for GroupMembers.belongsTo(Groups)
+            model: Groups,
+            as: "group",
+            include: [
+              {
+                // Load all members of the group
+                model: GroupMembers,
+                include: [
+                  {
+                    // For each group member, load the user details
+                    model: Users,
+                    attributes: { exclude: ["password"] }, // Exclude sensitive info
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      // Extract the groups from the admin memberships.
+      const groups = adminMemberships
+        .map((membership) => membership.group)
+        .filter(Boolean);
+
+      res.json({ success: true, groups });
+    } catch (err) {
+      console.error("Error fetching admin groups:", err);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error while fetching admin groups",
+      });
     }
   };
 }

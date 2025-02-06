@@ -8,6 +8,7 @@ import columnRouter from "./src/routes/columnRoutes.js";
 import taskRouter from "./src/routes/taskRoutes.js";
 import kanbanRouter from "./src/routes/kanbanRoutes.js";
 import groupMembersRouter from "./src/routes/groupMembersRoutes.js";
+import eventRouter from "./src/routes/eventRoutes.js";
 
 const app = express();
 app.use(
@@ -27,5 +28,5 @@ app.use("/api/v1/column", columnRouter);
 app.use("/api/v1/task", taskRouter);
 app.use("/api/v1/kanban", kanbanRouter);
 app.use("/api/v1/group-members", groupMembersRouter);
-
+app.use("/api/v1/event", eventRouter);
 export { app };

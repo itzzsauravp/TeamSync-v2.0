@@ -4,6 +4,7 @@ import GroupMembers from "./GroupMembers.js";
 import Messages from "./Messages.js";
 import TaskColumn from "./TaskColumn.js";
 import Task from "./Task.js";
+import Event from "./Event.js";
 
 function associateModels() {
   // Define associations
@@ -30,6 +31,9 @@ function associateModels() {
 
   Groups.hasMany(Task, { foreignKey: "group_id" });
   Task.belongsTo(Groups, { foreignKey: "group_id" });
+
+  Groups.hasMany(Event, { foreignKey: "group_id" });
+  Event.belongsTo(Groups, { foreignKey: "group_id" });
 }
 
 export {
@@ -39,5 +43,6 @@ export {
   Messages,
   TaskColumn,
   Task,
+  Event,
   associateModels,
 };

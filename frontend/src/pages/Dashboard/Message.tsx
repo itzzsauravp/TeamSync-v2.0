@@ -60,6 +60,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate } from "react-router-dom";
 import {
   AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -274,16 +276,17 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
   const currentUser = useSelector(selectUser);
   const currentUserId = currentUser.user_id;
 
+  // For direct messages, determine online status.
   const isOnline = is_direct_message
     ? activeUsers.includes(chat_info.otherUser?.user_id)
     : false;
 
-  // Determine if the current user is an admin.
+  // Determine if current user is admin in group chat.
   const isAdmin = (chat_info?.members || []).some(
-    (member) => member.user_id === currentUserId && member.role === "admin"
+    (member: any) => member.user_id === currentUserId && member.role === "admin"
   );
 
-  // Local state for dialogs, sheet, and member search
+  // Local state for dialogs, sheet, and member search.
   const [open, setOpen] = useState(false);
   const [addMembersOpen, setAddMembersOpen] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -293,15 +296,20 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
   const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
 
+  // State for confirmation dialogs
+  const [removeMemberOpen, setRemoveMemberOpen] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
+  const [confirmMemberLeaveOpen, setConfirmMemberLeaveOpen] = useState(false);
+
   // ----- API Handler: Add Members -----
   const handleAddMembers = async () => {
     try {
       await Promise.all(
         selectedUsers.map((userId) =>
-          // Ensure you have implemented addUserToGroup in your API
           addUserToGroup(chatDetails.group_id, userId)
         )
       );
+      // Refresh chat details (assume fetchAllChatForUser returns updated chats)
       const updatedChats = await fetchAllChatForUser();
       const updatedChat = updatedChats.chats.find(
         (c: any) => c.group_id === chatDetails.group_id
@@ -316,7 +324,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
     }
   };
 
-  const searchUsers = async (query: string) => {
+  const searchUsersHandler = async (query: string) => {
     try {
       const data = await fetchUsers({ username: query });
       setUsers(data || []);
@@ -326,31 +334,17 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
   };
 
   // ----- Group Leave / Delete Handlers -----
-  // For admin: show confirmation dialog for leaving (group deletion)
+  // For admin: show confirmation dialog for leaving (i.e. deleting the group)
   const handleAdminLeave = () => {
     setConfirmLeaveOpen(true);
   };
 
   // For non-admin: leave group directly.
-  const handleMemberLeave = async () => {
-    try {
-      const response = await leaveGroup(chatDetails.group_id);
-      if (response.success) {
-        // Show a dialogue indicating successful leave.
-        setAlertMessage(response.message || "You have left the group.");
-        setAlertOpen(true);
-        setTimeout(() => {
-          setAlertOpen(false);
-          navigate("/dashboard/message");
-          window.location.reload();
-        }, 2000);
-      }
-    } catch (err) {
-      console.error("Error while leaving the group.", err);
-    }
+  const handleMemberLeave = () => {
+    setConfirmMemberLeaveOpen(true);
   };
 
-  // Confirm admin leave: if confirmed, call deleteGroup.
+  // Confirm admin leave: delete group.
   const confirmAdminLeave = async () => {
     try {
       const response = await deleteGroup(chatDetails.group_id);
@@ -370,12 +364,33 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
     }
   };
 
-  // ----- Member Removal Handler (for admin removing another member) -----
-  const handleRemoveMember = async (memberId: string) => {
+  // Confirm member leave
+  const confirmMemberLeave = async () => {
     try {
-      const response = await removeMember(chatDetails.group_id, memberId);
+      const response = await leaveGroup(chatDetails.group_id);
       if (response.success) {
-        // If the API returns a deletion message (group deleted due to insufficient members)
+        setAlertMessage(response.message || "You have left the group.");
+        setAlertOpen(true);
+        setTimeout(() => {
+          setAlertOpen(false);
+          navigate("/dashboard/message");
+          window.location.reload();
+        }, 2000);
+      }
+      setConfirmMemberLeaveOpen(false);
+    } catch (err) {
+      console.error("Error while leaving the group.", err);
+      setConfirmMemberLeaveOpen(false);
+    }
+  };
+
+  // ----- Member Removal Handler (for admin removing another member) -----
+  const confirmRemoveMember = async () => {
+    if (!memberToRemove) return;
+
+    try {
+      const response = await removeMember(chatDetails.group_id, memberToRemove);
+      if (response.success) {
         if (response.message.toLowerCase().includes("deleted")) {
           setAlertMessage(response.message);
           setAlertOpen(true);
@@ -385,7 +400,6 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
             window.location.reload();
           }, 2000);
         } else {
-          // Otherwise, simply refresh chat details.
           const updatedChats = await fetchAllChatForUser();
           const updatedChat = updatedChats.chats.find(
             (c: any) => c.group_id === chatDetails.group_id
@@ -395,15 +409,19 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
           }
         }
       }
+      setRemoveMemberOpen(false);
+      setMemberToRemove(null);
     } catch (err) {
       console.error("Error removing member:", err);
+      setRemoveMemberOpen(false);
+      setMemberToRemove(null);
     }
   };
 
   return (
-    <div className="border-b p-4 flex items-center justify-between bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      {/* Left Side: Avatar and Group/Chat Name */}
-      <div className="flex items-center gap-3">
+    <div className="border-b p-4 bg-white/95 shadow-md flex items-center justify-between space-x-4">
+      {/* Left Side: Avatar and Chat/Group Name */}
+      <div className="flex items-center gap-4">
         <Avatar className="h-12 w-12">
           {is_direct_message ? (
             <>
@@ -420,7 +438,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
           )}
         </Avatar>
         <div>
-          <h2 className="font-semibold">
+          <h2 className="font-bold text-lg">
             {is_direct_message ? chat_info.otherUser?.username : group_name}
           </h2>
           {is_direct_message && (
@@ -438,11 +456,11 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
       <div className="flex items-center">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="rounded-full">
               <BsThreeDotsVertical className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-80">
+          <SheetContent side="right" className="w-80 rounded-lg p-6 shadow-lg">
             <SheetHeader>
               <SheetTitle>
                 {chatDetails.is_direct_message
@@ -450,7 +468,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
                   : "Group Info"}
               </SheetTitle>
             </SheetHeader>
-            <div className="space-y-4">
+            <div className="space-y-4 mt-4">
               {chatDetails.is_direct_message ? (
                 <div className="flex flex-col items-center gap-3 py-4">
                   <Avatar className="h-20 w-20">
@@ -481,7 +499,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
                       <Button
                         size="sm"
                         onClick={handleAdminLeave}
-                        className="text-red-500 bg-white hover:bg-gray-100 border"
+                        className="text-red-500 bg-white hover:bg-gray-100 border rounded-md"
                       >
                         <Trash2 className="h-4 w-4 mr-2 text-red-500" /> Delete
                         Group
@@ -491,7 +509,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
                         size="sm"
                         onClick={handleMemberLeave}
                         variant="outline"
-                        className="px-3"
+                        className="px-3 rounded-md"
                       >
                         Leave Group
                       </Button>
@@ -500,6 +518,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
                       size="sm"
                       onClick={() => setAddMembersOpen(true)}
                       variant="outline"
+                      className="rounded-md"
                     >
                       <Plus className="h-4 w-4 mr-2" /> Add Members
                     </Button>
@@ -512,12 +531,11 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
                       (member: any, index: number) => (
                         <div
                           key={`member-${member.user_id}-${index}`}
-                          className={cn(
-                            "flex items-center gap-3 py-2 px-2 border-b last:border-b-0",
+                          className={`flex items-center gap-3 py-2 px-2 border-b last:border-b-0 ${
                             member.user_id === currentUserId
                               ? "bg-green-50"
                               : ""
-                          )}
+                          }`}
                         >
                           <Avatar className="h-10 w-10">
                             <AvatarImage src={member.profilePicture} />
@@ -530,12 +548,11 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
                               {member.username}
                             </h4>
                             <span
-                              className={cn(
-                                "text-sm text-muted-foreground",
+                              className={`text-sm ${
                                 member.role === "admin"
-                                  ? "font-bold"
-                                  : "font-normal"
-                              )}
+                                  ? "font-bold text-gray-800"
+                                  : "font-normal text-gray-600"
+                              }`}
                             >
                               {member.role}
                             </span>
@@ -545,7 +562,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
                               <Button
                                 variant="outline"
                                 size="xs"
-                                className="px-3"
+                                className="px-3 rounded-md"
                                 onClick={handleMemberLeave}
                               >
                                 Leave
@@ -555,9 +572,11 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
                                 <Button
                                   variant="ghost"
                                   size="xs"
-                                  onClick={() =>
-                                    handleRemoveMember(member.user_id)
-                                  }
+                                  onClick={() => {
+                                    setMemberToRemove(member.user_id);
+                                    setRemoveMemberOpen(true);
+                                  }}
+                                  className="rounded-md"
                                 >
                                   <Trash2 className="h-4 w-4 text-red-500" />
                                 </Button>
@@ -577,7 +596,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
 
       {/* Add Members Dialog */}
       <Dialog open={addMembersOpen} onOpenChange={setAddMembersOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] rounded-lg p-6">
           <DialogHeader>
             <DialogTitle>Add Members to Group</DialogTitle>
             <DialogDescription>
@@ -586,14 +605,14 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
           </DialogHeader>
           <div className="space-y-4">
             <div className="relative">
-              <IoSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <IoSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search users..."
                 className="pl-9"
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  searchUsers(e.target.value);
+                  searchUsersHandler(e.target.value);
                 }}
               />
             </div>
@@ -632,6 +651,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
             <Button
               onClick={handleAddMembers}
               disabled={selectedUsers.length === 0}
+              className="rounded-md"
             >
               Add Selected Members
             </Button>
@@ -641,7 +661,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
 
       {/* Alert Dialog for Notifications */}
       <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-lg p-6">
           <AlertDialogHeader>
             <AlertDialogTitle>Notification</AlertDialogTitle>
             <AlertDialogDescription>{alertMessage}</AlertDialogDescription>
@@ -651,7 +671,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
 
       {/* Confirmation Dialog for Admin Leaving / Deleting Group */}
       <AlertDialog open={confirmLeaveOpen} onOpenChange={setConfirmLeaveOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-lg p-6">
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Group Deletion</AlertDialogTitle>
             <AlertDialogDescription>
@@ -660,14 +680,60 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setConfirmLeaveOpen(false)}
-              className="mr-2"
+            <AlertDialogCancel className="rounded-md">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmAdminLeave}
+              className="bg-red-500 hover:bg-red-600 rounded-md"
             >
-              Cancel
-            </Button>
-            <Button onClick={confirmAdminLeave}>Confirm</Button>
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Remove Member Confirmation Dialog */}
+      <AlertDialog open={removeMemberOpen} onOpenChange={setRemoveMemberOpen}>
+        <AlertDialogContent className="rounded-lg p-6">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Member Removal</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove this member from the group? This
+              action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-md">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmRemoveMember}
+              className="bg-red-500 hover:bg-red-600 rounded-md"
+            >
+              Confirm Removal
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Member Leave Confirmation Dialog */}
+      <AlertDialog
+        open={confirmMemberLeaveOpen}
+        onOpenChange={setConfirmMemberLeaveOpen}
+      >
+        <AlertDialogContent className="rounded-lg p-6">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Leave Group</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to leave this group? You won't be able to
+              access the chat history unless you're re-added.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-md">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmMemberLeave}
+              className="bg-red-500 hover:bg-red-600 rounded-md"
+            >
+              Leave Group
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

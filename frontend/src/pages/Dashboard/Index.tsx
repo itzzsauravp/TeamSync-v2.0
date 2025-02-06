@@ -13,7 +13,6 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { GroupManager } from "@/components/GroupManager";
 
 const Index = () => {
   const [date, setDate] = React.useState(new Date());
@@ -117,16 +116,6 @@ const Index = () => {
             <div className="text-2xl font-bold">12</div>
             <p className="text-xs text-muted-foreground">3 currently online</p>
             <Progress value={65} className="mt-2" />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">New Group</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="mt-4">
-            <GroupManager />
           </CardContent>
         </Card>
       </div>

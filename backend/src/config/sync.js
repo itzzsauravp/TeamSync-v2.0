@@ -5,6 +5,7 @@ import {
   Messages,
   TaskColumn,
   Task,
+  Event,
 } from "../models/association.js";
 import Kanban from "../models/Kanban.js";
 
@@ -19,6 +20,7 @@ associateModels();
     await Messages.sync({ force: true });
     await TaskColumn.sync({ force: true });
     await Task.sync({ force: true });
+    await Event.sync({ force: true });
 
     // Sync Kanban model last
     await Kanban.sync({ force: true });

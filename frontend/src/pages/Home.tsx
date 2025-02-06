@@ -21,7 +21,9 @@ const Home = () => {
           collaboration.
         </p>
         <div className="flex justify-center space-x-4">
-          <Button>Get Started</Button>
+          <Button onClick={() => navigate("/auth?login=false")}>
+            Get Started
+          </Button>
           <Button variant="outline">Learn More</Button>
         </div>
       </section>
@@ -84,7 +86,7 @@ const Home = () => {
           </p>
           <Button
             className="bg-white text-slate-900 hover:bg-lightGray"
-            onClick={() => navigate("/auth")}
+            onClick={() => navigate("/auth?login=false")}
           >
             Sign Up Now
           </Button>

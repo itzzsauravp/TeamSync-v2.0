@@ -5,7 +5,7 @@ const PageNotFoundFallback = () => {
   const navigate = useNavigate();
 
   const handleReturnHome = () => {
-    navigate("/");
+    navigate("/dashboard");
   };
 
   return (

@@ -75,7 +75,7 @@ export function NavUser() {
             <DropdownMenuItem
               onClick={() => {
                 localStorage.removeItem("token");
-                navigate("/auth");
+                navigate("/auth?login=true");
               }}
             >
               <LogOut />

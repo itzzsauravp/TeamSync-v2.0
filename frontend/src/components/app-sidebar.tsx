@@ -6,6 +6,7 @@ import {
   MessageCircleMore,
   GalleryVerticalEnd,
   Settings2,
+  ShieldCheck,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -56,6 +57,12 @@ const data = {
       title: "Kanban",
       url: "kanban",
       icon: Kanban,
+      isActive: true,
+    },
+    {
+      title: "Admin",
+      url: "admin",
+      icon: ShieldCheck,
       isActive: true,
     },
     {

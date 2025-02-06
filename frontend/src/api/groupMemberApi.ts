@@ -24,4 +24,14 @@ const removeMember = async (groupId: string, memberId: string) => {
   }
 };
 
-export { leaveGroup, removeMember };
+const fetchAdminGroups = async () => {
+  try {
+    const response = await axiosInstance.post("/group-members/admin");
+    return response.data;
+  } catch (err) {
+    console.error("Error fetching admin groups:", err);
+    return { groups: [] };
+  }
+};
+
+export { leaveGroup, removeMember, fetchAdminGroups };

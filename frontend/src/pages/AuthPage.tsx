@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Toaster, toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,12 +13,12 @@ import {
 } from "@/components/ui/card";
 import { login, register } from "@/api/authApi";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface LoginCredentials {
   username: string;
   password: string;
 }
+
 interface SignUpCredentials {
   first_name: string;
   last_name: string;
@@ -34,7 +35,7 @@ const LoginForm = () => {
     password: "",
   });
   const navigate = useNavigate();
-  const [message, setMessage] = useState<string>("");
+
   const handleLoginSubmission = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -42,26 +43,23 @@ const LoginForm = () => {
       const { token } = data;
       if (!token) {
         console.error("Token was not found in the response", data);
-        setMessage("Login failed: Token not received.");
-        setTimeout(() => setMessage(""), 3000);
+        toast.error("Login failed: Token not received.");
         return;
       }
       localStorage.setItem("token", token);
       console.log("Token saved to localStorage");
-      setMessage("Login successful! Redirecting...");
+      toast.success("Login successful! Redirecting...");
       setTimeout(() => {
-        setMessage("");
         navigate("/dashboard");
       }, 3000);
     } catch (err) {
       console.error("Error Occurred", err);
-      setMessage("Sorry!! The credentials miss match");
-      setTimeout(() => setMessage(""), 3000);
+      toast.error("Sorry!! The credentials mismatch");
     }
   };
 
   return (
-    <Card className="max-w-md mx-auto mt-10">
+    <Card className="max-w-md mx-auto mt-10 relative">
       <CardHeader>
         <CardTitle className="text-2xl">Login</CardTitle>
         <CardDescription>
@@ -76,7 +74,7 @@ const LoginForm = () => {
               type="text"
               id="username"
               name="username"
-              value={loginCredentials.username || ""}
+              value={loginCredentials.username}
               onChange={(e) =>
                 setLoginCredentials({
                   ...loginCredentials,
@@ -92,7 +90,7 @@ const LoginForm = () => {
               type="password"
               id="password"
               name="password"
-              value={loginCredentials.password || ""}
+              value={loginCredentials.password}
               onChange={(e) =>
                 setLoginCredentials({
                   ...loginCredentials,
@@ -108,19 +106,6 @@ const LoginForm = () => {
           </Button>
         </form>
       </CardContent>
-      {message && (
-        <Alert
-          variant={message ? "success" : "destructive"}
-          className="absolute w-fit top-20 right-2 bg-white shadow-lg"
-        >
-          <AlertTitle className="font-bold">
-            {message ? "Success!" : "Error"}
-          </AlertTitle>
-          <AlertDescription className="font-semibold">
-            {message}
-          </AlertDescription>
-        </Alert>
-      )}
     </Card>
   );
 };
@@ -137,9 +122,17 @@ const SignUpForm = () => {
       confirm_password: "",
     }
   );
+
   const [passwordsMatch, setPasswordsMatch] = useState(true);
-  const [message, setMessage] = useState<string>("");
-  const [isSuccess, setIsSuccess] = useState<boolean | null>(null);
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [usernameError, setUsernameError] = useState("");
+  const navigate = useNavigate();
+
+  // Regex patterns for validation.
+  const emailRegex = /^\S+@\S+\.\S+$/;
+  const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -149,69 +142,94 @@ const SignUpForm = () => {
       [name]: value,
     });
 
-    if (name === "password" || name === "confirm_password") {
+    // Live validation logic
+    if (name === "email") {
+      setEmailError(emailRegex.test(value) ? "" : "Invalid email format.");
+    }
+
+    if (name === "password") {
+      setPasswordError(
+        passwordRegex.test(value)
+          ? ""
+          : "Password must be at least 8 characters and contain a letter & number."
+      );
       setPasswordsMatch(
-        signupCredentials.password === value ||
-          signupCredentials.confirm_password === value
+        value === signupCredentials.confirm_password ||
+          signupCredentials.confirm_password === ""
+      );
+    }
+
+    if (name === "confirm_password") {
+      setPasswordsMatch(signupCredentials.password === value);
+    }
+
+    if (name === "username") {
+      setUsernameError(
+        value.length < 3 ? "Username must be at least 3 characters long." : ""
       );
     }
   };
 
+  const handleBlur = (field: string) => {
+    if (field === "email") setEmailError("");
+    if (field === "password") setPasswordError("");
+    if (field === "username") setUsernameError("");
+  };
+
   const handleSignupSubmission = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (emailError || passwordError || usernameError) {
+      toast.error("Fix the errors before signing up.");
+      return;
+    }
     if (!passwordsMatch) {
-      alert("Passwords do not match!");
+      toast.error("Passwords do not match!");
       return;
     }
 
     try {
       const data = await register(signupCredentials);
-      const { success } = data;
-      if (success) {
-        setMessage("Welcome to TeamSync\nYou may proceed to login");
-        setIsSuccess(true);
+      if (data.success) {
+        toast.success("Signup successful! Redirecting to login...");
+        setTimeout(() => navigate("/auth?login=true"), 3000);
       } else {
-        setMessage("Sorry!!! there was an issue with your signup");
-        setIsSuccess(false);
+        toast.error("Signup failed. Please try again.");
       }
     } catch (err) {
       console.error("Signup Error:", err);
-      setMessage("An error occurred during signup. Please try again later.");
-      setIsSuccess(false);
+      toast.error("An error occurred. Please try again.");
     }
   };
 
-  setTimeout(() => {
-    setMessage("");
-  }, 3000);
-
   return (
-    <Card className="max-w-md mx-auto mt-10">
+    <Card className="max-w-md mx-auto mt-10 relative">
       <CardHeader>
         <CardTitle className="text-2xl">Sign Up</CardTitle>
-        <CardDescription>
-          Create your account to get started with TeamSync.
-        </CardDescription>
+        <CardDescription>Create your account to get started.</CardDescription>
       </CardHeader>
       <CardContent>
         <form className="space-y-6" onSubmit={handleSignupSubmission}>
           <div className="space-y-2">
             <Label htmlFor="firstName">Name</Label>
             <div className="flex gap-4">
-              <Input
-                type="text"
-                placeholder="First"
-                name="first_name"
-                value={signupCredentials.first_name}
-                onChange={handleInputChange}
-              />
-              <Input
-                type="text"
-                placeholder="Last"
-                name="last_name"
-                value={signupCredentials.last_name}
-                onChange={handleInputChange}
-              />
+              <div className="w-1/2">
+                <Input
+                  type="text"
+                  placeholder="First"
+                  name="first_name"
+                  value={signupCredentials.first_name}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="w-1/2">
+                <Input
+                  type="text"
+                  placeholder="Last"
+                  name="last_name"
+                  value={signupCredentials.last_name}
+                  onChange={handleInputChange}
+                />
+              </div>
             </div>
           </div>
           <div className="space-y-2">
@@ -222,8 +240,12 @@ const SignUpForm = () => {
               name="username"
               value={signupCredentials.username}
               onChange={handleInputChange}
-              placeholder="itzzsaurap"
+              onBlur={() => handleBlur("username")}
+              placeholder="Enter your username"
             />
+            {usernameError && (
+              <p className="text-red-500 text-sm">{usernameError}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -233,8 +255,10 @@ const SignUpForm = () => {
               name="email"
               value={signupCredentials.email}
               onChange={handleInputChange}
-              placeholder="social.saurav2003@gmail.com"
+              onBlur={() => handleBlur("email")}
+              placeholder="Enter your email"
             />
+            {emailError && <p className="text-red-500 text-sm">{emailError}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="gender">Gender</Label>
@@ -254,22 +278,27 @@ const SignUpForm = () => {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <div className="space-y-4">
-              <Input
-                type="password"
-                placeholder="Password"
-                name="password"
-                value={signupCredentials.password}
-                onChange={handleInputChange}
-              />
-              <Input
-                type="password"
-                placeholder="Confirm Password"
-                name="confirm_password"
-                value={signupCredentials.confirm_password}
-                onChange={handleInputChange}
-              />
-            </div>
+            <Input
+              type="password"
+              placeholder="Password"
+              name="password"
+              value={signupCredentials.password}
+              onChange={handleInputChange}
+              onBlur={() => handleBlur("password")}
+            />
+            {passwordError && (
+              <p className="text-red-500 text-sm">{passwordError}</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirm_password">Confirm Password</Label>
+            <Input
+              type="password"
+              placeholder="Confirm Password"
+              name="confirm_password"
+              value={signupCredentials.confirm_password}
+              onChange={handleInputChange}
+            />
             {!passwordsMatch && (
               <p className="text-red-500 text-sm">Passwords do not match!</p>
             )}
@@ -279,28 +308,32 @@ const SignUpForm = () => {
           </Button>
         </form>
       </CardContent>
-      {message && (
-        <Alert
-          variant={isSuccess ? "success" : "destructive"}
-          className="absolute w-fit top-20 right-2 bg-white shadow-lg"
-        >
-          <AlertTitle className="font-bold">
-            {isSuccess ? "Success!" : "Error"}
-          </AlertTitle>
-          <AlertDescription className="font-semibold">
-            {message}
-          </AlertDescription>
-        </Alert>
-      )}
     </Card>
   );
 };
 
 const AuthPage = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Determine initial mode based on query param: default to login if missing or true.
+  const initialIsLogin = searchParams.get("login") !== "false";
+  const [isLogin, setIsLogin] = useState(initialIsLogin);
+
+  // Update query param when switching tabs.
+  const handleTabChange = (loginMode: boolean) => {
+    setIsLogin(loginMode);
+    setSearchParams({ login: loginMode ? "true" : "false" });
+  };
+
+  // If the query param changes externally, update local state.
+  useEffect(() => {
+    const param = searchParams.get("login");
+    setIsLogin(param !== "false");
+  }, [searchParams]);
 
   return (
     <>
+      {/* Global Toaster */}
+      <Toaster position="top-right" />
       <section className="mt-[5%] bg-gradient-to-r from-royalBlue to-midnightBlue text-white flex items-center justify-center p-4">
         <Card className="w-full max-w-md shadow-2xl">
           <CardHeader>
@@ -322,7 +355,7 @@ const AuthPage = () => {
                       ? "bg-gradient-to-r from-royalBlue to-midnightBlue text-white shadow-md"
                       : "bg-transparent text-gray-500 hover:text-gray-700"
                   }`}
-                  onClick={() => setIsLogin(true)}
+                  onClick={() => handleTabChange(true)}
                 >
                   Login
                 </TabsTrigger>
@@ -333,7 +366,7 @@ const AuthPage = () => {
                       ? "bg-gradient-to-r from-royalBlue to-midnightBlue text-white shadow-md"
                       : "bg-transparent text-gray-500 hover:text-gray-700"
                   }`}
-                  onClick={() => setIsLogin(false)}
+                  onClick={() => handleTabChange(false)}
                 >
                   Signup
                 </TabsTrigger>
