@@ -1,23 +1,22 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-type ChatDetails =
-  | {
-      id: string,
-      name: string,
-    }
-  | undefined;
+type ChatDetails = {
+  group_id: string;
+  group_name: string;
+  // …other properties as needed
+} | null;
 
 type LastMessage = {
-  [groupID: string]: string,
+  [groupID: string]: any; // Here, you store the last message object.
 };
 
-type ChatState = {
-  chatDetails: ChatDetails,
-  lastMessage: LastMessage,
-};
+interface ChatState {
+  chatDetails: ChatDetails;
+  lastMessage: LastMessage;
+}
 
 const initialState: ChatState = {
-  chatDetails: undefined,
+  chatDetails: null,
   lastMessage: {},
 };
 
@@ -30,13 +29,13 @@ const chatSlice = createSlice({
     },
     setLastMessage(
       state,
-      action: PayloadAction<{ groupID: string, lastMessage: string }>
+      action: PayloadAction<{ groupID: string; lastMessage: any }>
     ) {
       const { groupID, lastMessage } = action.payload;
       state.lastMessage[groupID] = lastMessage;
     },
     clearChatSlice(state) {
-      state.chatDetails = undefined;
+      state.chatDetails = null;
       state.lastMessage = {};
     },
   },
@@ -44,5 +43,4 @@ const chatSlice = createSlice({
 
 export const { setChatDetails, setLastMessage, clearChatSlice } =
   chatSlice.actions;
-export const useChatInfo = (state: { chat: ChatState }) => state.chat;
 export default chatSlice.reducer;

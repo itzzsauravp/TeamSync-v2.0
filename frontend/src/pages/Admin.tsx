@@ -404,48 +404,54 @@ const Admin = () => {
     groups.find((group) => group.group_id === groupId);
 
   // ------------------- GroupCard Component -------------------
-  const GroupCard = ({ group }: { group: any }) => (
-    <Card className="hover:shadow-lg transition-shadow duration-200">
-      <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-left">
-        <div>
-          <CardTitle className="text-xl font-semibold">
-            {group.group_name}
-          </CardTitle>
-          <CardDescription className="text-sm text-gray-500">
-            Created on: {new Date(group.createdAt).toLocaleDateString()}
-          </CardDescription>
-        </div>
-        <div className="mt-2 sm:mt-0 flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => openManageGroup(group)}
-          >
-            <UserPlus className="h-4 w-4 mr-1" /> Manage
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleDeleteGroup(group.group_id, group.group_name)}
-          >
-            <Trash2 className="h-4 w-4 text-red-500" />
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="mt-2 text-left">
-          <span className="font-semibold text-gray-700">Members:</span>
-          <ScrollArea className="mt-2 h-16">
-            <div className="flex gap-4">
-              {group.groupMembers.map((member: any) => (
-                <MemberPopover key={member.id} user={member.user} />
-              ))}
-            </div>
-          </ScrollArea>
-        </div>
-      </CardContent>
-    </Card>
-  );
+
+  const GroupCard = ({ group }: { group: any }) =>
+    group.groupMembers.length !== 2 && (
+      <Card className="hover:shadow-lg transition-shadow duration-200">
+        <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-left">
+          <div>
+            <CardTitle className="text-xl font-semibold">
+              {group.groupMembers.length == 2
+                ? "Direct Message (DM)"
+                : group.group_name}
+            </CardTitle>
+            <CardDescription className="text-sm text-gray-500">
+              Created on: {new Date(group.createdAt).toLocaleDateString()}
+            </CardDescription>
+          </div>
+          <div className="mt-2 sm:mt-0 flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => openManageGroup(group)}
+            >
+              <UserPlus className="h-4 w-4 mr-1" /> Manage
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() =>
+                handleDeleteGroup(group.group_id, group.group_name)
+              }
+            >
+              <Trash2 className="h-4 w-4 text-red-500" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="mt-2 text-left">
+            <span className="font-semibold text-gray-700">Members:</span>
+            <ScrollArea className="mt-2 h-16">
+              <div className="flex gap-4">
+                {group.groupMembers.map((member: any) => (
+                  <MemberPopover key={member.id} user={member.user} />
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+        </CardContent>
+      </Card>
+    );
 
   // ------------------- EventCard Component -------------------
   const EventCard = ({ event }: { event: any }) => {
