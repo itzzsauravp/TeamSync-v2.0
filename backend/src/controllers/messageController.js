@@ -3,11 +3,10 @@ import GroupMembers from "../models/GroupMembers.js";
 import { io } from "../socket/socket.js";
 
 class MessageController {
-  // TODO encrypt the messages
+  // ----- Send Text Message -----
   sendMessage = async (req, res) => {
     const { messageContent, groupID } = req.body;
     const sender_id = req.user.user_id;
-
     if (!messageContent || !groupID) {
       return res.status(400).json({
         success: false,
@@ -74,6 +73,7 @@ class MessageController {
     }
   };
 
+  // ----- Get All Messages -----
   getAllMessage = async (req, res) => {
     const { groupID } = req.params;
     const currentUserId = req.user.user_id;
@@ -108,11 +108,12 @@ class MessageController {
         sender_id: message.sender_id,
         sender: message.user ? message.user.username : "Unknown",
         message_content: message.message_content,
+        file_name: message.file_name, // include file info
+        file_type: message.file_type,
         sent_at: message.sent_at,
         profilePicture: message.user.profilePicture,
         is_current_user: message.sender_id === currentUserId,
       }));
-
       res.json({ success: true, messages: formattedMessages });
     } catch (err) {
       console.error("Error fetching messages:", err);
@@ -123,57 +124,289 @@ class MessageController {
     }
   };
 
+  // ----- Update Text Message -----
   updateMessage = async (req, res) => {
     const { newMessageContent } = req.body;
-    const { msgID } = req.body;
+    const { msgID } = req.params;
     const currentUserID = req.user.user_id;
     try {
-      const result = await Messages.findByPk(msgID);
-      if (!result) {
+      const messageToUpdate = await Messages.findByPk(msgID);
+      if (!messageToUpdate) {
         return res
           .status(400)
           .json({ success: false, message: "No message found" });
       }
-      if (result.sender_id !== currentUserID) {
+      if (messageToUpdate.sender_id !== currentUserID) {
         return res.status(400).json({
           success: false,
           message: "User is not the sender for this message",
         });
       }
-      result.message_content = newMessageContent;
-      await result.save();
-      res.json({ success: true, message: "message deleted successfully" });
+      // Update the content
+      messageToUpdate.message_content = newMessageContent;
+      await messageToUpdate.save();
+
+      // Retrieve the updated message with user info and add an "edited" flag
+      const formattedMessage = await Messages.findByPk(msgID, {
+        include: [
+          {
+            model: Users,
+            as: "user",
+            attributes: ["username", "profilePicture"],
+          },
+        ],
+      }).then((msg) => ({
+        message_id: msg.message_id,
+        sender_id: msg.sender_id,
+        sender: msg.user?.username || "Unknown",
+        message_content: msg.message_content,
+        file_name: msg.file_name, // in case it’s a file message too
+        file_type: msg.file_type,
+        sent_at: msg.sent_at,
+        profilePicture: msg.user?.profilePicture,
+        is_current_user: msg.sender_id === req.user.user_id,
+        // Use the timestamps to determine if edited.
+        edited: msg.updatedAt.getTime() !== msg.createdAt.getTime(),
+      }));
+
+      // Emit the updated message to the group room
+      io.to(messageToUpdate.group_id).emit("updateMessage", formattedMessage);
+      return res.json({ success: true, message: formattedMessage });
     } catch (err) {
-      console.error("An error occured during message update");
-      res
+      console.error("An error occurred during message update", err);
+      return res
         .status(500)
-        .send({ success: false, message: "Internal server error" });
+        .json({ success: false, message: "Internal server error" });
     }
   };
 
+  // ----- Delete Text Message -----
   deleteMessage = async (req, res) => {
-    const { msgID } = req.body;
+    const { msgID } = req.params;
     const currentUserID = req.user.user_id;
+
     try {
-      const result = await Messages.findByPk(msgID);
-      if (!result) {
+      const messageToDelete = await Messages.findByPk(msgID);
+      if (!messageToDelete) {
         return res
           .status(400)
           .json({ success: false, message: "No message found" });
       }
-      if (result.sender_id !== currentUserID) {
+      if (messageToDelete.sender_id !== currentUserID) {
         return res.status(400).json({
           success: false,
           message: "User is not the sender for this message",
         });
       }
-      await result.destroy();
-      res.json({ success: true, message: result });
+
+      await messageToDelete.destroy();
+
+      // Emit deletion event so all clients remove this message
+      io.to(messageToDelete.group_id).emit("deleteMessage", {
+        message_id: msgID,
+      });
+      return res.json({
+        success: true,
+        message: "Message deleted successfully",
+      });
     } catch (err) {
-      console.error("An error occured during message delete");
-      res
+      console.error("An error occurred during message delete", err);
+      return res
         .status(500)
-        .send({ success: false, message: "Internal server error" });
+        .json({ success: false, message: "Internal server error" });
+    }
+  };
+
+  // ----- Send File Message -----
+  sendFileMessage = async (req, res) => {
+    const { groupID, messageContent } = req.body;
+    const sender_id = req.user.user_id;
+
+    if (!req.file || !groupID) {
+      return res.status(400).json({
+        success: false,
+        message: "File or group ID is missing.",
+      });
+    }
+
+    try {
+      // Validate group and membership
+      const group = await Groups.findByPk(groupID);
+      if (!group) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Group not found." });
+      }
+      const member = await GroupMembers.findOne({
+        where: { group_id: groupID, user_id: sender_id },
+      });
+      if (!member) {
+        return res.status(403).json({
+          success: false,
+          message: "User is not a member of this group.",
+        });
+      }
+
+      // Create a new message with file attachment
+      const newMessage = await Messages.create({
+        sender_id,
+        group_id: groupID,
+        message_content: messageContent || "", // optional caption
+        file_data: req.file.buffer,
+        file_name: req.file.originalname,
+        file_type: req.file.mimetype,
+      });
+
+      const formattedMessage = await Messages.findByPk(newMessage.message_id, {
+        include: [
+          {
+            model: Users,
+            as: "user",
+            attributes: ["username", "profilePicture"],
+          },
+        ],
+      }).then((message) => ({
+        message_id: message.message_id,
+        sender_id: message.sender_id,
+        sender: message.user?.username || "Unknown",
+        message_content: message.message_content,
+        file_name: message.file_name,
+        file_type: message.file_type,
+        sent_at: message.sent_at,
+        profilePicture: message.user?.profilePicture,
+        is_current_user: message.sender_id === req.user.user_id,
+      }));
+
+      io.to(groupID).emit("newMessage", formattedMessage);
+      return res.status(201).json({ success: true, message: formattedMessage });
+    } catch (err) {
+      console.error("Error sending file message:", err);
+      return res.status(500).json({
+        success: false,
+        message: "Error occurred while sending the file.",
+      });
+    }
+  };
+
+  // ----- Update File Message -----
+  updateFileMessage = async (req, res) => {
+    const { msgID } = req.params;
+    const { messageContent } = req.body; // optional caption update
+    const sender_id = req.user.user_id;
+
+    if (!req.file) {
+      return res
+        .status(400)
+        .json({ success: false, message: "No file provided for update." });
+    }
+
+    try {
+      const message = await Messages.findByPk(msgID);
+      if (!message) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Message not found." });
+      }
+      if (message.sender_id !== sender_id) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not authorized to update this file.",
+        });
+      }
+
+      // Update the file data and optional caption
+      message.file_data = req.file.buffer;
+      message.file_name = req.file.originalname;
+      message.file_type = req.file.mimetype;
+      if (messageContent !== undefined) {
+        message.message_content = messageContent;
+      }
+      await message.save();
+
+      const formattedMessage = await Messages.findByPk(message.message_id, {
+        include: [
+          {
+            model: Users,
+            as: "user",
+            attributes: ["username", "profilePicture"],
+          },
+        ],
+      }).then((msg) => ({
+        message_id: msg.message_id,
+        sender_id: msg.sender_id,
+        sender: msg.user?.username || "Unknown",
+        message_content: msg.message_content,
+        file_name: msg.file_name,
+        file_type: msg.file_type,
+        sent_at: msg.sent_at,
+        profilePicture: msg.user?.profilePicture,
+        is_current_user: msg.sender_id === sender_id,
+        edited: msg.updatedAt.getTime() !== msg.createdAt.getTime(),
+      }));
+
+      io.to(message.group_id).emit("updateMessage", formattedMessage);
+      return res.json({ success: true, message: formattedMessage });
+    } catch (err) {
+      console.error("Error updating file message:", err);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error while updating file.",
+      });
+    }
+  };
+
+  // ----- Delete File Message -----
+  deleteFileMessage = async (req, res) => {
+    const { msgID } = req.params;
+    const sender_id = req.user.user_id;
+
+    try {
+      const message = await Messages.findByPk(msgID);
+      if (!message) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Message not found." });
+      }
+      if (message.sender_id !== sender_id) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not authorized to delete this file.",
+        });
+      }
+
+      await message.destroy();
+      io.to(message.group_id).emit("deleteMessage", { message_id: msgID });
+      return res.json({
+        success: true,
+        message: "File message deleted successfully.",
+      });
+    } catch (err) {
+      console.error("Error deleting file message:", err);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error while deleting file message.",
+      });
+    }
+  };
+
+  // ----- Retrieve File Data -----
+  getFileData = async (req, res) => {
+    const { msgID } = req.params;
+    try {
+      const message = await Messages.findByPk(msgID);
+      if (!message || !message.file_data) {
+        return res
+          .status(404)
+          .json({ success: false, message: "File not found." });
+      }
+      res.set("Content-Type", message.file_type);
+      return res.send(message.file_data);
+    } catch (err) {
+      console.error("Error retrieving file data:", err);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error while retrieving file data.",
+      });
     }
   };
 }

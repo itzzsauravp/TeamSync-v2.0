@@ -14,19 +14,6 @@ const Navbar = () => {
           TeamSync
         </div>
 
-        {/* Navigation Links */}
-        <div className="flex space-x-4">
-          <Button variant="ghost" className="text-darkGray">
-            Features
-          </Button>
-          <Button variant="ghost" className="text-darkGray">
-            Pricing
-          </Button>
-          <Button variant="ghost" className="text-darkGray">
-            Contact
-          </Button>
-        </div>
-
         {/* Get Started Button */}
         <Button
           className="text-white hover:bg-midnightBlue"
