@@ -17,6 +17,7 @@ import { getAllGroupEvents } from "@/api/eventApi";
 import { fetchAllChatForUser } from "@/api/groupApi";
 
 const Index = () => {
+  const [date, setDate] = useState(new Date());
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
   const [recentChats, setRecentChats] = useState<any[]>([]);
   console.log(upcomingEvents);
@@ -61,7 +62,9 @@ const Index = () => {
           </p>
         </div>
         <Button className="gap-2">
-          <Calendar className="h-4 w-4" />{" "}
+          <Calendar className="h-4 w-4" /> {date.getDate()}{" "}
+          {date.toLocaleString("default", { month: "long" })}{" "}
+          {date.getFullYear()}
         </Button>
       </div>
 
