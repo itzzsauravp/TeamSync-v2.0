@@ -17,21 +17,15 @@ import { getAllGroupEvents } from "@/api/eventApi";
 import { fetchAllChatForUser } from "@/api/groupApi";
 
 const Index = () => {
-  const [date, setDate] = useState(new Date());
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
   const [recentChats, setRecentChats] = useState<any[]>([]);
-
+  console.log(upcomingEvents);
   useEffect(() => {
     const fetchEvents = async () => {
       try {
         const res = await getAllGroupEvents();
-        if (res.success) {
-          const sortedEvents = res.groupEvents.sort(
-            (a: any, b: any) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-          setUpcomingEvents(sortedEvents);
-        }
+
+        setUpcomingEvents(res);
       } catch (error) {
         console.error("Error fetching events:", error);
       }
@@ -68,8 +62,6 @@ const Index = () => {
         </div>
         <Button className="gap-2">
           <Calendar className="h-4 w-4" />{" "}
-          {date.toLocaleString("default", { month: "long" })}{" "}
-          {date.getFullYear()}
         </Button>
       </div>
 
@@ -137,12 +129,7 @@ const Index = () => {
           </CardHeader>
           <CardContent>
             <div className="flex justify-center">
-              <CalendarComponent
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                className="rounded-md border"
-              />
+              <CalendarComponent mode="single" className="rounded-md border" />
             </div>
           </CardContent>
         </Card>
@@ -160,7 +147,7 @@ const Index = () => {
                   No events found.
                 </div>
               ) : (
-                upcomingEvents.map((event) => (
+                upcomingEvents.groupEvents.map((event) => (
                   <div
                     key={event.event_id}
                     className="mb-4 p-3 rounded-lg border bg-card hover:bg-accent transition-colors"
