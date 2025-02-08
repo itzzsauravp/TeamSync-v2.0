@@ -46,11 +46,9 @@ const Settings: React.FC<SettingsProps> = () => {
     profilePicture,
   } = user;
 
-  // State for toggling edit mode and tracking loading state
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Local state for user information changes
   const [updatedUserInfo, setUpdatedUserInfo] = useState({
     username,
     email,
@@ -70,7 +68,6 @@ const Settings: React.FC<SettingsProps> = () => {
   const handleUserUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Show a loading toast notification
     const toastId = toast.loading("Updating your credentials...");
     try {
       const data = await updateUserInformation(updatedUserInfo);
@@ -79,7 +76,6 @@ const Settings: React.FC<SettingsProps> = () => {
         toast.success(
           "Your credentials were changed successfully and you will have to login again"
         );
-        // Delay for 2 seconds before logging out and redirecting
         setTimeout(() => {
           localStorage.removeItem("token");
           navigate("/auth?login=true");
@@ -109,7 +105,6 @@ const Settings: React.FC<SettingsProps> = () => {
     }
   };
 
-  // Cancel editing: revert changes and disable edit mode
   const handleCancelEdit = (e: React.MouseEvent) => {
     e.preventDefault();
     setUpdatedUserInfo({

@@ -129,7 +129,6 @@ const SignUpForm = () => {
   const [usernameError, setUsernameError] = useState("");
   const navigate = useNavigate();
 
-  // Regex patterns for validation.
   const emailRegex = /^\S+@\S+\.\S+$/;
   const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
 
@@ -142,7 +141,6 @@ const SignUpForm = () => {
       [name]: value,
     });
 
-    // Live validation logic
     if (name === "email") {
       setEmailError(emailRegex.test(value) ? "" : "Invalid email format.");
     }
@@ -314,17 +312,14 @@ const SignUpForm = () => {
 
 const AuthPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  // Determine initial mode based on query param: default to login if missing or true.
   const initialIsLogin = searchParams.get("login") !== "false";
   const [isLogin, setIsLogin] = useState(initialIsLogin);
 
-  // Update query param when switching tabs.
   const handleTabChange = (loginMode: boolean) => {
     setIsLogin(loginMode);
     setSearchParams({ login: loginMode ? "true" : "false" });
   };
 
-  // If the query param changes externally, update local state.
   useEffect(() => {
     const param = searchParams.get("login");
     setIsLogin(param !== "false");

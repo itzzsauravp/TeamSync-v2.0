@@ -10,6 +10,7 @@ const createEvent = async (eventDetails: object) => {
   }
 };
 
+// this is to get all the events that is created by the user.
 const getEventsForUser = async () => {
   try {
     const response = await axiosInstance.post("/event/user-events");
@@ -20,6 +21,7 @@ const getEventsForUser = async () => {
   }
 };
 
+// this is to get all the events from all the groups that the user is associated with.
 const getAllGroupEvents = async () => {
   try {
     const response = await axiosInstance.post("/event/group-events");
@@ -33,7 +35,7 @@ const getAllGroupEvents = async () => {
 const editEvent = async (eventId: string, eventDetails: object) => {
   try {
     const response = await axiosInstance.put(
-      `/events/edit/${eventId}`,
+      `/event/edit/${eventId}`,
       eventDetails
     );
     return response.data;
@@ -53,10 +55,21 @@ const deleteEvent = async (eventId: string) => {
   }
 };
 
+const getEventsForGroup = async (groupId: string) => {
+  try {
+    const response = await axiosInstance.get(`/event/group/${groupId}`);
+    return response.data;
+  } catch (err) {
+    console.error("Error fetching events for group:", err);
+    throw err;
+  }
+};
+
 export {
   createEvent,
   getEventsForUser,
   editEvent,
   deleteEvent,
   getAllGroupEvents,
+  getEventsForGroup,
 };

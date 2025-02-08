@@ -1,4 +1,4 @@
-import React from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle, Clock, Users, Calendar, BarChart3 } from "lucide-react";
 import {
   Card,
@@ -13,40 +13,46 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { getAllGroupEvents } from "@/api/eventApi";
+import { fetchAllChatForUser } from "@/api/groupApi";
 
 const Index = () => {
-  const [date, setDate] = React.useState(new Date());
+  const [date, setDate] = useState(new Date());
+  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
+  const [recentChats, setRecentChats] = useState<any[]>([]);
 
-  const events = [
-    {
-      id: 1,
-      title: "Team Meeting",
-      date: "2025-02-04",
-      time: "10:00 AM",
-      type: "meeting",
-    },
-    {
-      id: 2,
-      title: "Project Deadline",
-      date: "2025-02-05",
-      time: "3:00 PM",
-      type: "deadline",
-    },
-    {
-      id: 3,
-      title: "Client Review",
-      date: "2025-02-06",
-      time: "11:30 AM",
-      type: "review",
-    },
-    {
-      id: 4,
-      title: "Design Workshop",
-      date: "2025-02-07",
-      time: "2:00 PM",
-      type: "workshop",
-    },
-  ];
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const res = await getAllGroupEvents();
+        if (res.success) {
+          const sortedEvents = res.groupEvents.sort(
+            (a: any, b: any) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          setUpcomingEvents(sortedEvents);
+        }
+      } catch (error) {
+        console.error("Error fetching events:", error);
+      }
+    };
+
+    fetchEvents();
+  }, []);
+  useEffect(() => {
+    const fetchChats = async () => {
+      try {
+        const res = await fetchAllChatForUser();
+        if (res.success) {
+          setRecentChats(res.chats || []);
+        }
+      } catch (error) {
+        console.error("Error fetching chats:", error);
+      }
+    };
+
+    fetchChats();
+  }, []);
 
   return (
     <div className="p-6 space-y-6">
@@ -61,7 +67,9 @@ const Index = () => {
           </p>
         </div>
         <Button className="gap-2">
-          <Calendar className="h-4 w-4" /> February 2025
+          <Calendar className="h-4 w-4" />{" "}
+          {date.toLocaleString("default", { month: "long" })}{" "}
+          {date.getFullYear()}
         </Button>
       </div>
 
@@ -139,46 +147,61 @@ const Index = () => {
           </CardContent>
         </Card>
 
+        {/* Upcoming Events Section */}
         <Card>
           <CardHeader>
             <CardTitle>Upcoming Events</CardTitle>
-            <CardDescription>
-              Your schedule for the next few days
-            </CardDescription>
+            <CardDescription>Your schedule for upcoming events</CardDescription>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[300px] pr-4">
-              {events.map((event) => (
-                <div
-                  key={event.id}
-                  className="mb-4 p-3 rounded-lg border bg-card hover:bg-accent transition-colors"
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <h4 className="font-semibold">{event.title}</h4>
-                    <Badge
-                      variant={
-                        event.type === "meeting"
-                          ? "default"
-                          : event.type === "deadline"
-                          ? "destructive"
-                          : event.type === "review"
-                          ? "secondary"
-                          : "outline"
-                      }
-                    >
-                      {event.type}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    {event.date}
-                  </div>
-                  <div className="flex items-center text-sm text-muted-foreground mt-1">
-                    <Clock className="h-4 w-4 mr-2" />
-                    {event.time}
-                  </div>
+              {upcomingEvents.length === 0 ? (
+                <div className="text-sm text-gray-500 text-center py-8">
+                  No events found.
                 </div>
-              ))}
+              ) : (
+                upcomingEvents.map((event) => (
+                  <div
+                    key={event.event_id}
+                    className="mb-4 p-3 rounded-lg border bg-card hover:bg-accent transition-colors"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className="font-semibold">{event.title}</h4>
+                      <Badge variant="default">Event</Badge>
+                    </div>
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      {new Date(event.date).toLocaleDateString()}
+                    </div>
+                    <div className="flex items-center text-sm text-muted-foreground mt-1">
+                      <Clock className="h-4 w-4 mr-2" />
+                      {event.time}
+                    </div>
+                    {event.location && (
+                      <div className="flex items-center text-sm text-muted-foreground mt-1">
+                        <span>Location: {event.location}</span>
+                      </div>
+                    )}
+                    {event.platform && (
+                      <div className="flex items-center text-sm text-muted-foreground mt-1">
+                        <span>Platform: {event.platform}</span>
+                      </div>
+                    )}
+                    {event.link && (
+                      <div className="mt-1">
+                        <a
+                          href={event.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-500 underline"
+                        >
+                          Join Event
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
             </ScrollArea>
           </CardContent>
         </Card>
@@ -186,42 +209,50 @@ const Index = () => {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Recent Chats */}
-        <Card className="col-span-1">
+        {/* Recent Conversations Section */}
+        <Card>
           <CardHeader>
             <CardTitle>Recent Conversations</CardTitle>
             <CardDescription>Latest messages from your teams</CardDescription>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[300px] pr-4">
-              {[1, 2, 3, 4, 5].map((_, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-4 mb-4 p-2 rounded-lg hover:bg-accent transition-colors"
-                >
-                  <Avatar>
-                    <AvatarImage src={`/api/placeholder/32/32`} />
-                    <AvatarFallback>TM</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium">Design Team</p>
-                      <span className="text-xs text-muted-foreground">
-                        2m ago
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground truncate">
-                      Latest updates on the dashboard layout...
-                    </p>
-                  </div>
+              {recentChats.length === 0 ? (
+                <div className="text-sm text-gray-500 text-center py-8">
+                  No recent conversations.
                 </div>
-              ))}
+              ) : (
+                recentChats.map((chat) => (
+                  <div
+                    key={chat.group_id}
+                    className="flex items-center gap-4 mb-4 p-2 rounded-lg hover:bg-slate-300 transition-colors"
+                  >
+                    <Avatar>
+                      <AvatarImage src={`/api/placeholder/32/32`} />
+                      <AvatarFallback>
+                        {chat.group_name.slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium">{chat.group_name}</p>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(chat.created_at).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </ScrollArea>
           </CardContent>
         </Card>
 
-        {/* Tasks Overview */}
-        <Card className="col-span-1">
+        {/* Tasks Overview remains unchanged */}
+        <Card>
           <CardHeader>
             <CardTitle>Current Tasks</CardTitle>
             <CardDescription>Track your team's progress</CardDescription>
