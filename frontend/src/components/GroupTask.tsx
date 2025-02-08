@@ -4,8 +4,7 @@ import React, { useEffect, useState } from "react";
 import { fetchAllGroups } from "../api/groupApi";
 import { fetchAdminGroups } from "../api/groupMemberApi";
 import main from "../../../algo.js";
-import {listGroupTasksApi, createTaskApi} from "../api/taskApi.js";
-
+import { listGroupTasksApi, createTaskApi } from "../api/taskApi.js";
 
 // Import shadcn UI components (adjust the import paths based on your project setup)
 import {
@@ -18,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CloudCog } from "lucide-react";
 
 // Define a Group type based on the API response
 interface Group {
@@ -42,6 +42,7 @@ const GroupTask: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [groupMembers, setGroupMembers] = useState<any[]>([]);
   const [assignmentResult, setAssignmentResult] = useState<any[]>([]);
+  const [newTaskEstimatedTime, setNewTaskEstimatedTime] = useState("");
 
   const handleAssignTasks = () => {
     const unassignedTasks = tasks.filter((task) => !task.assigned);
@@ -53,12 +54,33 @@ const GroupTask: React.FC = () => {
     // Create a cost matrix with dimensions: groupMembers.length x unassignedTasks.length
     // For example, use a simple cost function: cost = (rowIndex + 1) * (colIndex + 1)
     const costMatrix = groupMembers.map((_, i) =>
-      unassignedTasks.map((_, j) => (i + 1) * (j + 1))
+      unassignedTasks.map((task1, j) => {
+        // Map difficulty to a numeric cost factor
+        const diffMap = { "Easy": 1, "Mid": 2, "Hard": 3 };
+        const difficultyCost = diffMap[task1.difficulty] || 1;
+        console.log(task1);
+        // Calculate time remaining in days (if deadline is in the past, use 0)
+        const now = new Date();
+        const deadlineDate = new Date(task1.due_date);
+        const timeRemainingDays = Math.max(
+          (deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+          0
+        );
+        // Lower cost if deadline is near (less time remaining adds less cost)
+        return difficultyCost + timeRemainingDays;
+      })
     );
+    console.log("groupMembers and unassigned tasks");
+    console.log(groupMembers);
+    console.log(unassignedTasks);
+    console.log("this is the cost matrix");
+    console.log(costMatrix);
 
     // Run the main function from algo.js with the cost matrix
     const assignment = main(costMatrix);
     setAssignmentResult(assignment);
+    console.log("this is the assignment");
+    console.log(assignment);
   };
   // 2. Replace your current group members useEffect with this one:
   useEffect(() => {
@@ -94,7 +116,6 @@ const GroupTask: React.FC = () => {
       loadGroupTasks();
     }
   }, [selectedGroup]);
-  
 
   // Task state and form fields
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -136,8 +157,8 @@ const GroupTask: React.FC = () => {
     if (selectedGroup) {
       const loadGroupMembers = async () => {
         try {
-        //   console.log("printint members");
-        //   console.log(selectedGroup);
+          //   console.log("printint members");
+          //   console.log(selectedGroup);
           const groups = await fetchAdminGroups(selectedGroup.group_id);
           const members = groups.groups.filter(
             (x) => x.group_id == selectedGroup.group_id
@@ -154,18 +175,17 @@ const GroupTask: React.FC = () => {
   }, [selectedGroup]);
 
   // Handle new task submission
-    const handleTaskSubmit = async (e: React.FormEvent) => {
+  const handleTaskSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTaskName || !newTaskDeadline || !newTaskDifficulty) return;
 
-    // Prepare task payload – ensure you replace "your-column-id" with the actual column ID if available
     const taskPayload = {
       task_name: newTaskName,
-      column_id: "your-column-id",
       group_id: selectedGroup?.group_id,
       due_date: newTaskDeadline,
       // Map "mid" to "medium" if needed by the database model
       difficulty: newTaskDifficulty === "mid" ? "medium" : newTaskDifficulty,
+      estimated_time: parseInt(newTaskEstimatedTime, 10),
     };
 
     const result = await createTaskApi(taskPayload);
@@ -181,6 +201,7 @@ const GroupTask: React.FC = () => {
     setNewTaskDeadline("");
     setNewTaskDifficulty("easy");
     setIsTaskDialogOpen(false);
+    setNewTaskEstimatedTime("");
   };
 
   return (
@@ -261,6 +282,19 @@ const GroupTask: React.FC = () => {
                     />
                   </div>
                   <div>
+                    <Label htmlFor="taskEstimatedTime" className="block mb-1">
+                      Estimated Time (days)
+                    </Label>
+                    <Input
+                      id="taskEstimatedTime"
+                      type="number"
+                      value={newTaskEstimatedTime}
+                      onChange={(e) => setNewTaskEstimatedTime(e.target.value)}
+                      placeholder="Enter estimated time in days"
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
                     <Label htmlFor="taskDifficulty" className="block mb-1">
                       Difficulty
                     </Label>
@@ -300,12 +334,11 @@ const GroupTask: React.FC = () => {
           {/* Unassigned Tasks Table */}
           <div className="mt-8">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-lg font-bold">Unassigned Tasks</h3>
+              <h3 className="text-lg font-bold mb-2">Unassigned Tasks</h3>
               <Button variant="secondary" onClick={handleAssignTasks}>
                 Click to Assign Task
               </Button>
             </div>
-            <h3 className="text-lg font-bold mb-2">Unassigned Tasks</h3>
             {tasks.filter((task) => !task.assigned).length === 0 ? (
               <p>No unassigned tasks.</p>
             ) : (
@@ -322,8 +355,10 @@ const GroupTask: React.FC = () => {
                     .filter((task) => !task.assigned)
                     .map((task) => (
                       <tr key={task.id}>
-                        <td className="border px-4 py-2">{task.name}</td>
-                        <td className="border px-4 py-2">{task.deadline}</td>
+                        <td className="border px-4 py-2">{task.task_name}</td>
+                        <td className="border px-4 py-2">
+                          {new Date(task.due_date).toLocaleDateString()}
+                        </td>
                         <td className="border px-4 py-2">{task.difficulty}</td>
                       </tr>
                     ))}
@@ -339,10 +374,22 @@ const GroupTask: React.FC = () => {
                 <p key={userIndex}>
                   {groupMembers[userIndex].user.first_name} is assigned jobs:{" "}
                   {jobs
-                    .map(
-                      (jobIndex: number) =>
-                        tasks.filter((task) => !task.assigned)[jobIndex].name
-                    )
+                    .map((jobIndex: number) => {
+                      const unassignedTasks = tasks.filter(
+                        (task) => !task.assigned
+                      );
+                      console.log(
+                        `User ${userIndex} jobIndex: ${jobIndex}`,
+                        "Unassigned Tasks Array:",
+                        unassignedTasks
+                      );
+                      // Check if jobIndex is valid
+                      if (jobIndex < unassignedTasks.length) {
+                        return unassignedTasks[jobIndex].task_name;
+                      } else {
+                        return "Invalid Job Index";
+                      }
+                    })
                     .join(", ")}
                 </p>
               ))}
