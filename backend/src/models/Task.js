@@ -38,7 +38,7 @@ const Task = sequelize.define(
     },
     column_id: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: "taskColumns",
         key: "column_id",

@@ -1,20 +1,15 @@
 import { Task } from "../models/association.js";
 
 const createTask = async (req, res) => {
+  console.log("tyring to create task");
+  console.log(req.body);
   try {
     // Add validation for required fields
-    if (!req.body.task_name || !req.body.column_id) {
+    /* if (!req.body.task_name || !req.body.column_id) {
       return res.status(400).json({
         error: "Task name and column ID are required",
       });
-    }
-
-    // Ensure valid UUID format for relations
-    if (!validator.isUUID(req.body.column_id)) {
-      return res.status(400).json({
-        error: "Invalid column ID format",
-      });
-    }
+    } */
 
     const task = await Task.create({
       ...req.body,
@@ -65,5 +60,20 @@ const deleteTask = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getTasksByGroup = async (req, res) => {
+  try {
+    const { group_id } = req.body; 
+    if (!group_id) {
+      return res.status(400).json({ error: "group_id is required" });
+    }
+    const tasks = await Task.findAll({
+      where: { group_id },
+    });
+    res.json(tasks);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: error.message });
+  }
+};
 
-export { createTask, getTasks, updateTask, deleteTask };
+export { createTask, getTasks, updateTask, deleteTask, getTasksByGroup};

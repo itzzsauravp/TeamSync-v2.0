@@ -2,7 +2,7 @@ import { server } from "./src/socket/socket.js"; // HTTP server with Socket.IO a
 import sequelize from "./src/config/database.js";
 import "dotenv/config";
 
-const port = process.env.HOME_PORT || 3000;
+const port = process.env.HOME_PORT || 3001;
 
 const startServer = async () => {
   try {

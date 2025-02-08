@@ -4,11 +4,14 @@ import {
   updateTask,
   deleteTask,
   getTasks,
-} from "../controllers/taskController.js";
+  getTasksByGroup
+} from "../controllers/TaskController.js";
 const taskRouter = Router();
 
 taskRouter.route("/").post(createTask).get(getTasks);
 
 taskRouter.route("/:task_id").put(updateTask).delete(deleteTask);
+
+taskRouter.post("/listByGroup", getTasksByGroup);
 
 export default taskRouter;

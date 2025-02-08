@@ -63,9 +63,9 @@ class Functions {
   }
   async sendMessage(groupId, config, token) {
     const response = await request(app)
-      .post(`/api/v1/message/send/${groupId}`)
+      .post(`/api/v1/message/send`)
       .set("Authorization", `Bearer ${token}`)
-      .send(config)
+      .send({...config, groupID:groupId})
     return response;
   }
   async getAllMessage(groupId, token) {
