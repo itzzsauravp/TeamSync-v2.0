@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { BsThreeDotsVertical } from "react-icons/bs";
 import { IoSearch } from "react-icons/io5";
 import {
   Card,
@@ -73,7 +72,6 @@ import { selectUser } from "@/store/userSlice";
 import { cn } from "@/lib/utils";
 import GroupTask from "@/components/GroupTask";
 
-// =================== MEMBER POPOVER ===================
 const MemberPopover = ({ user }: { user: any }) => {
   const [open, setOpen] = useState(false);
   return (
@@ -125,7 +123,6 @@ const MemberPopover = ({ user }: { user: any }) => {
   );
 };
 
-// =================== ADMIN COMPONENT ===================
 const Admin = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -140,13 +137,11 @@ const Admin = () => {
   const [isAddMembersOpen, setIsAddMembersOpen] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
 
-  // Data States
   const [groups, setGroups] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Group-related State
   const [groupName, setGroupName] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [selectedMembersForRemoval, setSelectedMembersForRemoval] = useState<
@@ -154,7 +149,6 @@ const Admin = () => {
   >([]);
   const [manageGroup, setManageGroup] = useState<any>(null);
 
-  // Event-related State
   const [eventDetails, setEventDetails] = useState({
     title: "",
     date: "",
@@ -165,7 +159,6 @@ const Admin = () => {
     group_id: "",
   });
 
-  // Delete & Alert Dialog State
   const [deleteConfirmation, setDeleteConfirmation] = useState({
     isOpen: false,
     type: "",
@@ -175,10 +168,8 @@ const Admin = () => {
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
 
-  // User Search State
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Fallback messages
   const noGroupsMessage =
     "You are not an admin in any group. Please create a group first.";
   const noEventsMessage =
@@ -186,7 +177,6 @@ const Admin = () => {
       ? "You are not an admin in any group, so you cannot create events. Please create a group first."
       : "No events found. Create a new event for your group.";
 
-  // ------------------- Fetching Data -------------------
   useEffect(() => {
     fetchGroupsAndEvents();
   }, []);
@@ -222,8 +212,6 @@ const Admin = () => {
     }
   };
 
-  // ------------------- Group CRUD -------------------
-  // Create Group (button enabled only if at least 2 members selected)
   const handleCreateGroup = async () => {
     if (!groupName.trim() || selectedUsers.length < 2) return;
     setIsLoading(true);
@@ -255,8 +243,6 @@ const Admin = () => {
     });
   };
 
-  // ------------------- Group Management Dialogs -------------------
-  // Open Manage Group Dialog
   const openManageGroup = (group: any) => {
     setManageGroup(group);
     setIsManageGroupOpen(true);
@@ -266,7 +252,6 @@ const Admin = () => {
     setSelectedMembersForRemoval([]);
   };
 
-  // Remove Selected Members from Group (multi-select)
   const handleRemoveSelectedMembers = async () => {
     if (selectedMembersForRemoval.length === 0) return;
     setIsLoading(true);
@@ -290,7 +275,6 @@ const Admin = () => {
     }
   };
 
-  // ------------------- Add Members Dialog -------------------
   const handleAddMembersToGroup = async () => {
     if (!manageGroup || selectedUsers.length === 0) return;
     setIsLoading(true);
@@ -309,7 +293,6 @@ const Admin = () => {
     }
   };
 
-  // ------------------- Leave Group & Remove Member -------------------
   const handleAdminLeave = async () => {
     try {
       const response = await leaveGroup(manageGroup.group_id);
@@ -327,7 +310,6 @@ const Admin = () => {
     }
   };
 
-  // ------------------- Event CRUD -------------------
   const handleCreateOrUpdateEvent = async () => {
     if (
       !eventDetails.title.trim() ||
@@ -404,8 +386,6 @@ const Admin = () => {
   const getGroupInfo = (groupId: string) =>
     groups.find((group) => group.group_id === groupId);
 
-  // ------------------- GroupCard Component -------------------
-
   const GroupCard = ({ group }: { group: any }) =>
     group.groupMembers.length !== 2 && (
       <Card className="hover:shadow-lg transition-shadow duration-200">
@@ -454,7 +434,6 @@ const Admin = () => {
       </Card>
     );
 
-  // ------------------- EventCard Component -------------------
   const EventCard = ({ event }: { event: any }) => {
     const groupInfo = getGroupInfo(event.group_id);
     const eventDate = new Date(event.date);
@@ -526,7 +505,6 @@ const Admin = () => {
     );
   };
 
-  // ------------------- Fallback UI -------------------
   const renderGroupsFallback = () => (
     <div className="flex flex-col items-center justify-center h-64">
       <p className="text-lg font-medium text-gray-600">{noGroupsMessage}</p>
@@ -547,7 +525,6 @@ const Admin = () => {
     </div>
   );
 
-  // Determine if current user is admin in the group being managed.
   const isCurrentUserAdmin =
     manageGroup &&
     (manageGroup.groupMembers || []).some(
@@ -1063,11 +1040,17 @@ const Admin = () => {
                 }
               >
                 <option value="">Select a group</option>
-                {groups.map((group) => (
-                  <option key={group.group_id} value={group.group_id}>
-                    {group.group_name}
-                  </option>
-                ))}
+                {groups
+                  .filter((group) => {
+                    if (group.groupMembers.length !== 2) {
+                      return group;
+                    }
+                  })
+                  .map((group) => (
+                    <option key={group.group_id} value={group.group_id}>
+                      {group.group_name}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>

@@ -80,6 +80,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getEventsForGroup } from "@/api/eventApi";
 
 interface ChatInterfaceInputProps {
   groupID: string;
@@ -152,10 +153,8 @@ const ChatInterfaceInput: React.FC<ChatInterfaceInputProps> = ({ groupID }) => {
   const [isSending, setIsSending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle file selection (multiple allowed, max 5)
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    // Limit to 5 files
     const limitedFiles = files.slice(0, 5);
     const previews = limitedFiles.map((file) => ({
       file,
@@ -166,7 +165,6 @@ const ChatInterfaceInput: React.FC<ChatInterfaceInputProps> = ({ groupID }) => {
     setSelectedFiles(previews);
   };
 
-  // Clean up created object URLs when files change or component unmounts.
   useEffect(() => {
     return () => {
       selectedFiles.forEach((fp) => {
@@ -177,21 +175,17 @@ const ChatInterfaceInput: React.FC<ChatInterfaceInputProps> = ({ groupID }) => {
     };
   }, [selectedFiles]);
 
-  // Handle send action: if files are selected, send each as a file message; then send text if any.
   const handleSend = async () => {
     if (isSending) return;
-    if (!message.trim() && selectedFiles.length === 0) return; // Nothing to send
+    if (!message.trim() && selectedFiles.length === 0) return;
     setIsSending(true);
     try {
-      // Send each selected file (with the text caption)
       for (const fp of selectedFiles) {
         await sendFileMessage(groupID, fp.file, message);
       }
-      // If no files were selected and just text was entered, send text message
       if (!selectedFiles.length && message.trim()) {
         await sendMessage(groupID, message);
       }
-      // Clear inputs after sending
       setMessage("");
       setSelectedFiles([]);
       if (fileInputRef.current) {
@@ -288,11 +282,9 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editMessage, setEditMessage] = useState(message.message_content);
-  // For file messages, allow user to re‑select a file during edit.
   const [editFile, setEditFile] = useState<File | null>(null);
   const [editFilePreview, setEditFilePreview] = useState<string | null>(null);
 
-  // For image files, load the object URL when not editing.
   useEffect(() => {
     if (
       message.file_name &&
@@ -317,7 +309,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     };
   }, [message, isEditing, fileUrl]);
 
-  // When editing a file message and a new file is selected, create a preview.
   useEffect(() => {
     if (editFile && editFile.type.startsWith("image/")) {
       const url = URL.createObjectURL(editFile);
@@ -330,7 +321,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     }
   }, [editFile]);
 
-  // Handlers for preview and save (non‑editing mode)
   const handlePreview = async () => {
     try {
       if (
@@ -363,12 +353,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     }
   };
 
-  // Handler for saving edits.
   const handleEditSave = async () => {
     try {
       let updated;
       if (message.file_name) {
-        // For file messages, require a new file to update.
+        
         if (!editFile) {
           alert("Please select a new file to update this file message.");
           return;
@@ -381,9 +370,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       } else {
         updated = await updateMessage(message.message_id, editMessage);
       }
-      // After saving, exit edit mode.
       setIsEditing(false);
-      // (Real‑time updates via socket.io should update the message list.)
     } catch (error) {
       alert("Failed to update message.");
       console.error(error);
@@ -404,14 +391,12 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       } else {
         await deleteMessage(message.message_id);
       }
-      // (Real‑time deletion via socket.io will update the message list.)
     } catch (error) {
       alert("Failed to delete message.");
       console.error(error);
     }
   };
 
-  // If in edit mode, render an inline editing interface.
   if (isEditing) {
     return (
       <div
@@ -478,7 +463,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     );
   }
 
-  // Render the normal message bubble.
   return (
     <div
       className={`flex ${isCurrentUser ? "justify-end" : "justify-start"} mb-4`}
@@ -524,7 +508,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           </div>
         )}
         {message.file_name ? (
-          // File message rendering with preview & save options.
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className="cursor-pointer">
@@ -576,7 +559,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          // Regular text message rendering.
           <p className="text-sm whitespace-pre-wrap break-words">
             {message.message_content}
           </p>
@@ -585,7 +567,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           <TooltipTrigger asChild>
             <p className="text-xs mt-1 opacity-70 cursor-pointer">
               {formatDateAndTime(message.sent_at)}
-              {/* Only display (edited) if message.edited is true */}
               {message.edited && " (edited)"}
             </p>
           </TooltipTrigger>
@@ -748,17 +729,17 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
   const currentUser = useSelector((state: any) => state.user);
   const currentUserId = currentUser.user_id;
 
-  // Determine online status for direct messages
+  // Determine online status (for direct messages)
   const isOnline = is_direct_message
     ? activeUsers.includes(chat_info.otherUser?.user_id)
     : false;
 
-  // Determine admin status in group chat
+  // Determine admin status in a group chat
   const isAdmin = (chat_info?.members || []).some(
     (member: any) => member.user_id === currentUserId && member.role === "admin"
   );
 
-  // Local state for dialogs, sheet, and search
+  // Local state for dialogs, sheet, search, and events
   const [open, setOpen] = useState(false);
   const [addMembersOpen, setAddMembersOpen] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -773,17 +754,21 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
   const [confirmMemberLeaveOpen, setConfirmMemberLeaveOpen] = useState(false);
 
-  // Local state for file (non‑image) messages and image messages
-  const [fileMessages, setFileMessages] = useState<Message[]>([]);
-  const [imageMessages, setImageMessages] = useState<Message[]>([]);
+  // Local state for file and image messages
+  const [fileMessages, setFileMessages] = useState<any[]>([]);
+  const [imageMessages, setImageMessages] = useState<any[]>([]);
   const [filesLoading, setFilesLoading] = useState<boolean>(false);
-  // Fetch initial messages (files & images) when the group changes
+
+  // Local state for group events
+  const [groupEvents, setGroupEvents] = useState<any[]>([]);
+
+  // Load files & images when the group changes
   useEffect(() => {
     const loadFiles = async () => {
       setFilesLoading(true);
       try {
         const data = await getAllMessages(chatDetails.group_id);
-        const messages: Message[] = data.messages || [];
+        const messages: any[] = data.messages || [];
         const files = messages.filter(
           (m) => m.file_name && !m.file_type?.startsWith("image/")
         );
@@ -801,36 +786,45 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
     loadFiles();
   }, [chatDetails.group_id]);
 
-  // Listen for real‑time file/image updates via socket events
+  // Load group events when the group changes
   useEffect(() => {
-    const handleFileMessage = (message: Message) => {
-      // Only process messages for the current group that have a file
+    const loadEvents = async () => {
+      try {
+        const data = await getEventsForGroup(chatDetails.group_id);
+        setGroupEvents(data.events || []);
+      } catch (error) {
+        console.error("Error loading events:", error);
+      }
+    };
+    loadEvents();
+  }, [chatDetails.group_id]);
+
+  // Subscribe to real-time updates for file/image messages
+  useEffect(() => {
+    const handleFileMessage = (message: any) => {
       if (message.group_id !== chatDetails.group_id || !message.file_name)
         return;
-
       if (message.file_type?.startsWith("image/")) {
         setImageMessages((prev) => {
           const exists = prev.find(
             (msg) => msg.message_id === message.message_id
           );
-          if (exists) {
-            return prev.map((msg) =>
-              msg.message_id === message.message_id ? message : msg
-            );
-          }
-          return [...prev, message];
+          return exists
+            ? prev.map((msg) =>
+                msg.message_id === message.message_id ? message : msg
+              )
+            : [...prev, message];
         });
       } else {
         setFileMessages((prev) => {
           const exists = prev.find(
             (msg) => msg.message_id === message.message_id
           );
-          if (exists) {
-            return prev.map((msg) =>
-              msg.message_id === message.message_id ? message : msg
-            );
-          }
-          return [...prev, message];
+          return exists
+            ? prev.map((msg) =>
+                msg.message_id === message.message_id ? message : msg
+              )
+            : [...prev, message];
         });
       }
     };
@@ -855,7 +849,38 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
     };
   }, [chatDetails.group_id, socket]);
 
-  // Handlers for adding members, leaving group, and removing members
+  // Subscribe to real-time event updates
+  useEffect(() => {
+    const handleNewEvent = (event: any) => {
+      if (event.group_id === chatDetails.group_id) {
+        setGroupEvents((prev) => [...prev, event]);
+      }
+    };
+
+    const handleUpdateEvent = (updatedEvent: any) => {
+      setGroupEvents((prev) =>
+        prev.map((ev) =>
+          ev.event_id === updatedEvent.event_id ? updatedEvent : ev
+        )
+      );
+    };
+
+    const handleDeleteEvent = ({ event_id }: { event_id: string }) => {
+      setGroupEvents((prev) => prev.filter((ev) => ev.event_id !== event_id));
+    };
+
+    socket.on("newEvent", handleNewEvent);
+    socket.on("updateEvent", handleUpdateEvent);
+    socket.on("deleteEvent", handleDeleteEvent);
+
+    return () => {
+      socket.off("newEvent", handleNewEvent);
+      socket.off("updateEvent", handleUpdateEvent);
+      socket.off("deleteEvent", handleDeleteEvent);
+    };
+  }, [chatDetails.group_id, socket]);
+
+  // Handlers for group member actions
   const handleAddMembers = async () => {
     try {
       await Promise.all(
@@ -959,8 +984,8 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
     }
   };
 
-  // A helper component to display image thumbnails in the "Images" tab
-  const GroupImageThumbnail: React.FC<{ message: Message }> = ({ message }) => {
+  // A helper component for displaying image thumbnails
+  const GroupImageThumbnail: React.FC<{ message: any }> = ({ message }) => {
     const [thumbUrl, setThumbUrl] = useState<string | null>(null);
     useEffect(() => {
       const fetchThumb = async () => {
@@ -1078,10 +1103,15 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
                 >
                   Images
                 </TabsTrigger>
+                <TabsTrigger
+                  value="events"
+                  className="flex-1 rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                >
+                  Events
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="home" className="p-6 space-y-6">
-                {/* Home Tab Content */}
                 {is_direct_message ? (
                   <div className="flex flex-col items-center gap-4">
                     <Avatar className="h-24 w-24">
@@ -1205,7 +1235,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {fileMessages.map((msg: Message) => (
+                    {fileMessages.map((msg: any) => (
                       <div
                         key={msg.message_id}
                         className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
@@ -1251,8 +1281,52 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatDetails }) => {
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-3">
-                    {imageMessages.map((msg: Message) => (
+                    {imageMessages.map((msg: any) => (
                       <GroupImageThumbnail key={msg.message_id} message={msg} />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Events Tab */}
+              <TabsContent value="events" className="p-6">
+                {groupEvents.length === 0 ? (
+                  <div className="text-sm text-gray-500 text-center py-8">
+                    No events scheduled yet.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {groupEvents.map((event: any) => (
+                      <div
+                        key={event.event_id}
+                        className="border rounded-lg p-4 shadow hover:shadow-md transition-shadow"
+                      >
+                        <h4 className="text-lg font-semibold">{event.title}</h4>
+                        <p className="text-sm text-gray-600">
+                          {new Date(event.date).toLocaleDateString()} at{" "}
+                          {event.time}
+                        </p>
+                        {event.location && (
+                          <p className="text-sm text-gray-500">
+                            Location: {event.location}
+                          </p>
+                        )}
+                        {event.platform && (
+                          <p className="text-sm text-gray-500">
+                            Platform: {event.platform}
+                          </p>
+                        )}
+                        {event.link && (
+                          <a
+                            href={event.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-500 underline"
+                          >
+                            Join Event
+                          </a>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}
@@ -1679,6 +1753,7 @@ const ChatList: React.FC = () => {
       setIsLoading(true);
       try {
         const data = await fetchAllChatForUser();
+        console.log(data)
         setChats(data.chats || []);
         if (data.chats?.length > 0) {
           socket.emit(
@@ -1696,7 +1771,6 @@ const ChatList: React.FC = () => {
     if (activeTab === "my-chat") loadChats();
   }, [activeTab, socket]);
 
-  // Listen for new and updated messages to update the last message
   useEffect(() => {
     const handleNewOrUpdatedMessage = (message: Message) => {
       dispatch(
@@ -1704,7 +1778,6 @@ const ChatList: React.FC = () => {
       );
     };
 
-    // When a message is deleted, we refetch the chats as a fallback
     const handleDeleteMessage = ({
       message_id,
       group_id,

@@ -38,7 +38,6 @@ import {
 import { useSelector } from "react-redux";
 import { selectUser } from "@/store/userSlice";
 
-// API functions from kanbanApi.ts
 import {
   createKanban,
   getAllKanbans,
@@ -46,8 +45,6 @@ import {
   deleteKanban,
 } from "@/api/kanbanApi";
 
-// ---------- Helper: SortableTask Component ----------
-// Now uses the authenticated user's profile picture for the avatar.
 const SortableTask = ({ task, bgColor, onEdit, onDelete, userProfilePicture }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: task.kanban_id });
@@ -116,7 +113,6 @@ const SortableTask = ({ task, bgColor, onEdit, onDelete, userProfilePicture }) =
   );
 };
 
-// ---------- Helper: DroppableColumn Component ----------
 const DroppableColumn = ({ column, children }) => {
   const { setNodeRef } = useDroppable({ id: column.id });
   return (
@@ -140,9 +136,7 @@ const DroppableColumn = ({ column, children }) => {
   );
 };
 
-// ---------- Main KanbanBoard Component ----------
 const KanbanBoard = () => {
-  // Define columns by task status.
   const initialColumns = {
     todo: {
       id: "todo",
@@ -191,15 +185,11 @@ const KanbanBoard = () => {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
-  // Get the authenticated user from the Redux store to use their profile picture.
   const user = useSelector(selectUser);
-
-  // Centralized function: re-fetch tasks from the database.
   const fetchTasks = async () => {
     setIsLoading(true);
     const data = await getAllKanbans();
     if (data?.success) {
-      // Create fresh column objects with new task arrays.
       const newCols = {
         todo: { ...initialColumns.todo, tasks: [] },
         ongoing: { ...initialColumns.ongoing, tasks: [] },
@@ -221,7 +211,6 @@ const KanbanBoard = () => {
     fetchTasks();
   }, []);
 
-  // ---------- Drag & Drop Handlers ----------
   const handleDragStart = (event) => {
     const { active } = event;
     const task = Object.values(columns)
@@ -275,7 +264,6 @@ const KanbanBoard = () => {
     setActiveTask(null);
   };
 
-  // ---------- Create New Task ----------
   const handleAddTask = async () => {
     if (!newTask.title.trim() || isSaving) return;
     setIsSaving(true);
@@ -288,7 +276,6 @@ const KanbanBoard = () => {
     setIsSaving(false);
   };
 
-  // ---------- Update Task ----------
   const handleSaveEdit = async () => {
     const updated = await updateKanban(editTask.kanban_id, editTask);
     if (updated?.success) {
@@ -297,7 +284,6 @@ const KanbanBoard = () => {
     }
   };
 
-  // ---------- Delete Task ----------
   const handleDeleteTask = async (kanban_id) => {
     const deleted = await deleteKanban(kanban_id);
     if (deleted?.success) {
@@ -420,7 +406,7 @@ const KanbanBoard = () => {
                         bgColor={column.cardBg}
                         onEdit={setEditTask}
                         onDelete={handleDeleteTask}
-                        userProfilePicture={user.profilePicture}  // Use authenticated user's profile picture
+                        userProfilePicture={user.profilePicture}
                       />
                     )
                   )}

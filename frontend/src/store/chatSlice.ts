@@ -3,11 +3,10 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 type ChatDetails = {
   group_id: string;
   group_name: string;
-  // …other properties as needed
 } | null;
 
 type LastMessage = {
-  [groupID: string]: any; // Here, you store the last message object.
+  [groupID: string]: any;
 };
 
 interface ChatState {
