@@ -1,3 +1,431 @@
+// import React, { useEffect, useState } from "react";
+// import { fetchAllGroups } from "../api/groupApi";
+// import { fetchAdminGroups } from "../api/groupMemberApi";
+// import main from "../../../algo.js";
+// import { listGroupTasksApi, createTaskApi } from "../api/taskApi.js";
+
+// // Import shadcn UI components (adjust the import paths based on your project setup)
+// import {
+//   Dialog,
+//   DialogContent,
+//   DialogHeader,
+//   DialogTitle,
+//   DialogTrigger,
+// } from "@/components/ui/dialog";
+// import { Button } from "@/components/ui/button";
+// import { Input } from "@/components/ui/input";
+// import { Label } from "@/components/ui/label";
+// import { CloudCog } from "lucide-react";
+
+// // Define a Group type based on the API response
+// interface Group {
+//   group_id: string;
+//   group_name: string;
+// }
+
+// // Define a Task type (keys match the backend response)
+// interface Task {
+//   id: string;
+//   task_name: string;
+//   due_date: string; // Expected in YYYY-MM-DD format
+//   difficulty: "easy" | "mid" | "hard";
+//   assigned: boolean;
+// }
+
+// const GroupTask: React.FC = () => {
+//   // Group selection state
+//   const [groups, setGroups] = useState<Group[]>([]);
+//   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+//   const [isGroupDialogOpen, setIsGroupDialogOpen] = useState<boolean>(false);
+//   const [loading, setLoading] = useState<boolean>(true);
+//   const [groupMembers, setGroupMembers] = useState<any[]>([]);
+//   const [assignmentResult, setAssignmentResult] = useState<any[]>([]);
+
+//   // Task state and form fields
+//   const [tasks, setTasks] = useState<Task[]>([]);
+//   const [newTaskName, setNewTaskName] = useState("");
+//   const [newTaskDeadline, setNewTaskDeadline] = useState("");
+//   const [newTaskDifficulty, setNewTaskDifficulty] = useState<"easy" | "mid" | "hard">("easy");
+//   const [newTaskEstimatedTime, setNewTaskEstimatedTime] = useState("");
+//   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState<boolean>(false);
+
+//   // Load groups when the component mounts
+//   useEffect(() => {
+//     const loadGroups = async () => {
+//       try {
+//         const data = await fetchAllGroups();
+//         if (data && Array.isArray(data.groups)) {
+//           setGroups(data.groups);
+//         } else {
+//           console.error("Unexpected data format from fetchAllGroups", data);
+//         }
+//       } catch (error) {
+//         console.error("Error fetching groups:", error);
+//       } finally {
+//         setLoading(false);
+//       }
+//     };
+//     loadGroups();
+//   }, []);
+
+//   // Handle group selection
+//   const handleGroupSelect = (group: Group) => {
+//     setSelectedGroup(group);
+//     setIsGroupDialogOpen(false);
+//   };
+
+//   // Load group members using the API response structure
+//   useEffect(() => {
+//     if (selectedGroup) {
+//       const loadGroupMembers = async () => {
+//         try {
+//           const groupsData = await fetchAdminGroups(selectedGroup.group_id);
+//           const groupObj = groupsData.groups.find((x: any) => x.group_id === selectedGroup.group_id);
+//           if (groupObj && groupObj.groupMembers) {
+//             setGroupMembers(groupObj.groupMembers);
+//           }
+//         } catch (error) {
+//           console.error("Error fetching group members:", error);
+//         }
+//       };
+//       loadGroupMembers();
+//     }
+//   }, [selectedGroup]);
+
+//   // Load tasks associated with the selected group
+//   useEffect(() => {
+//     if (selectedGroup) {
+//       const loadGroupTasks = async () => {
+//         try {
+//           const result = await listGroupTasksApi(selectedGroup.group_id);
+//           if (result.success) {
+//             setTasks(result.data);
+//           } else {
+//             console.error("Error fetching group tasks", result.error);
+//           }
+//         } catch (error) {
+//           console.error("Error fetching group tasks:", error);
+//         }
+//       };
+//       loadGroupTasks();
+//     }
+//   }, [selectedGroup]);
+
+//   // Handle new task submission
+//   const handleTaskSubmit = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (!newTaskName || !newTaskDeadline || !newTaskDifficulty) return;
+
+//     const taskPayload = {
+//       task_name: newTaskName,
+//       group_id: selectedGroup?.group_id,
+//       due_date: newTaskDeadline,
+//       // Map "mid" to "medium" if needed by the backend
+//       difficulty: newTaskDifficulty === "mid" ? "medium" : newTaskDifficulty,
+//       estimated_time: parseInt(newTaskEstimatedTime, 10),
+//     };
+
+//     const result = await createTaskApi(taskPayload);
+//     if (result.success) {
+//       setTasks((prev) => [...prev, result.data]);
+//     } else {
+//       alert("Error adding task");
+//     }
+//     setNewTaskName("");
+//     setNewTaskDeadline("");
+//     setNewTaskDifficulty("easy");
+//     setNewTaskEstimatedTime("");
+//     setIsTaskDialogOpen(false);
+//   };
+
+//   // Handle task assignment
+//   const handleAssignTasks = () => {
+//     const unassignedTasks = tasks.filter((task) => !task.assigned);
+//     if (groupMembers.length === 0 || unassignedTasks.length === 0) {
+//       alert("Not enough group members or tasks to assign.");
+//       return;
+//     }
+
+//     // Create a cost matrix factoring in difficulty and deadline
+//     const costMatrix = groupMembers.map((_, i) =>
+//       unassignedTasks.map((task) => {
+//         const diffMap = { easy: 1, mid: 2, hard: 3 };
+//         const difficultyCost = diffMap[task.difficulty] || 1;
+//         const now = new Date();
+//         const deadlineDate = new Date(task.due_date);
+//         const timeRemainingDays = Math.max(
+//           (deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+//           0
+//         );
+//         return difficultyCost + timeRemainingDays;
+//       })
+//     );
+//     console.log("Cost Matrix:", costMatrix);
+//     const assignment = main(costMatrix);
+//     setAssignmentResult(assignment);
+//     console.log("Assignment Result:", assignment);
+//   };
+
+//   return (
+//     <div className="p-6 bg-gray-50 min-h-screen">
+//       {selectedGroup ? (
+//         <div>
+//           {/* Selected Group Header */}
+//           <div className="mb-6 flex items-center justify-between bg-white p-4 rounded shadow">
+//             <div className="flex items-center">
+//               <CloudCog className="w-6 h-6 mr-2 text-blue-500" />
+//               <div>
+//                 <h2 className="text-xl font-bold">Selected Group</h2>
+//                 <p className="text-gray-600">{selectedGroup.group_name}</p>
+//               </div>
+//             </div>
+//             <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}>
+//               <DialogTrigger asChild>
+//                 <Button variant="primary">Change Group</Button>
+//               </DialogTrigger>
+//               <DialogContent>
+//                 <DialogHeader>
+//                   <DialogTitle>Select a Group</DialogTitle>
+//                 </DialogHeader>
+//                 <div className="mt-4 space-y-2">
+//                   {loading ? (
+//                     <p>Loading groups...</p>
+//                   ) : (
+//                     groups.map((group) => (
+//                       <Button
+//                         key={group.group_id}
+//                         onClick={() => handleGroupSelect(group)}
+//                         variant="outline"
+//                         className="w-full"
+//                       >
+//                         {group.group_name || "Unnamed Group"}
+//                       </Button>
+//                     ))
+//                   )}
+//                 </div>
+//               </DialogContent>
+//             </Dialog>
+//           </div>
+
+//           {/* Add Task Dialog */}
+//           <div className="mb-4">
+//             <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
+//               <DialogTrigger asChild>
+//                 <Button variant="secondary">Add Task</Button>
+//               </DialogTrigger>
+//               <DialogContent>
+//                 <DialogHeader>
+//                   <DialogTitle>Add a New Task</DialogTitle>
+//                 </DialogHeader>
+//                 <form onSubmit={handleTaskSubmit} className="space-y-4 mt-4">
+//                   <div>
+//                     <Label htmlFor="taskName" className="block mb-1">
+//                       Task Name
+//                     </Label>
+//                     <Input
+//                       id="taskName"
+//                       type="text"
+//                       value={newTaskName}
+//                       onChange={(e) => setNewTaskName(e.target.value)}
+//                       placeholder="Enter task name"
+//                       className="w-full"
+//                     />
+//                   </div>
+//                   <div>
+//                     <Label htmlFor="taskDeadline" className="block mb-1">
+//                       Deadline
+//                     </Label>
+//                     <Input
+//                       id="taskDeadline"
+//                       type="date"
+//                       value={newTaskDeadline}
+//                       onChange={(e) => setNewTaskDeadline(e.target.value)}
+//                       className="w-full"
+//                     />
+//                   </div>
+//                   <div>
+//                     <Label htmlFor="taskEstimatedTime" className="block mb-1">
+//                       Estimated Time (days)
+//                     </Label>
+//                     <Input
+//                       id="taskEstimatedTime"
+//                       type="number"
+//                       value={newTaskEstimatedTime}
+//                       onChange={(e) => setNewTaskEstimatedTime(e.target.value)}
+//                       placeholder="Enter estimated time in days"
+//                       className="w-full"
+//                     />
+//                   </div>
+//                   <div>
+//                     <Label htmlFor="taskDifficulty" className="block mb-1">
+//                       Difficulty
+//                     </Label>
+//                     <select
+//                       id="taskDifficulty"
+//                       value={newTaskDifficulty}
+//                       onChange={(e) =>
+//                         setNewTaskDifficulty(e.target.value as "easy" | "mid" | "hard")
+//                       }
+//                       className="border px-4 py-2 rounded w-full"
+//                     >
+//                       <option value="easy">Easy</option>
+//                       <option value="mid">Mid</option>
+//                       <option value="hard">Hard</option>
+//                     </select>
+//                   </div>
+//                   <Button type="submit">Add Task</Button>
+//                 </form>
+//               </DialogContent>
+//             </Dialog>
+//           </div>
+
+//           {/* Group Members Display */}
+//           {selectedGroup && groupMembers.length > 0 && (
+//             <div className="mt-2 text-sm text-gray-700">
+//               <strong>Group Members:</strong>{" "}
+//               {groupMembers.map((member, idx) => (
+//                 <span key={idx}>
+//                   {member.user.first_name}
+//                   {idx < groupMembers.length - 1 ? ", " : ""}
+//                 </span>
+//               ))}
+//             </div>
+//           )}
+
+//           {/* Unassigned Tasks Table */}
+//           <div className="mt-8">
+//             <div className="flex items-center justify-between mb-2">
+//               <h3 className="text-lg font-bold">Unassigned Tasks</h3>
+//               <Button variant="secondary" onClick={handleAssignTasks}>
+//                 Click to Assign Task
+//               </Button>
+//             </div>
+//             {tasks.filter((task) => !task.assigned).length === 0 ? (
+//               <p className="text-gray-600">No unassigned tasks.</p>
+//             ) : (
+//               <div className="overflow-x-auto">
+//                 <table className="min-w-full divide-y divide-gray-200">
+//                   <thead className="bg-gray-100">
+//                     <tr>
+//                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                         Task Name
+//                       </th>
+//                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                         Deadline
+//                       </th>
+//                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                         Difficulty
+//                       </th>
+//                     </tr>
+//                   </thead>
+//                   <tbody className="bg-white divide-y divide-gray-200">
+//                     {tasks.filter((task) => !task.assigned).map((task) => (
+//                       <tr key={task.id}>
+//                         <td className="px-4 py-2">{task.task_name}</td>
+//                         <td className="px-4 py-2">{new Date(task.due_date).toLocaleDateString()}</td>
+//                         <td className="px-4 py-2">{task.difficulty}</td>
+//                       </tr>
+//                     ))}
+//                   </tbody>
+//                 </table>
+//               </div>
+//             )}
+//           </div>
+
+//           {/* Assignment Result Display */}
+//           {assignmentResult.length > 0 && (
+//             <div className="mt-4 bg-white p-4 rounded shadow">
+//               <h3 className="text-lg font-bold mb-2">Assignment Result</h3>
+//               {assignmentResult.map((jobs, userIndex) => (
+//                 <p key={userIndex} className="text-gray-700">
+//                   <span className="font-semibold">
+//                     {groupMembers[userIndex].user.first_name}
+//                   </span>{" "}
+//                   is assigned:{" "}
+//                   {jobs
+//                     .map((jobIndex: number) => {
+//                       const unassignedTasks = tasks.filter((task) => !task.assigned);
+//                       return jobIndex < unassignedTasks.length
+//                         ? unassignedTasks[jobIndex].task_name
+//                         : "Invalid Job Index";
+//                     })
+//                     .join(", ")}
+//                 </p>
+//               ))}
+//             </div>
+//           )}
+
+//           {/* Assigned Tasks Table */}
+//           <div className="mt-8">
+//             <h3 className="text-lg font-bold mb-2">Assigned Tasks</h3>
+//             {tasks.filter((task) => task.assigned).length === 0 ? (
+//               <p className="text-gray-600">No assigned tasks.</p>
+//             ) : (
+//               <div className="overflow-x-auto">
+//                 <table className="min-w-full divide-y divide-gray-200">
+//                   <thead className="bg-gray-100">
+//                     <tr>
+//                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                         Task Name
+//                       </th>
+//                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                         Deadline
+//                       </th>
+//                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                         Difficulty
+//                       </th>
+//                     </tr>
+//                   </thead>
+//                   <tbody className="bg-white divide-y divide-gray-200">
+//                     {tasks.filter((task) => task.assigned).map((task) => (
+//                       <tr key={task.id}>
+//                         <td className="px-4 py-2">{task.task_name}</td>
+//                         <td className="px-4 py-2">{new Date(task.due_date).toLocaleDateString()}</td>
+//                         <td className="px-4 py-2">{task.difficulty}</td>
+//                       </tr>
+//                     ))}
+//                   </tbody>
+//                 </table>
+//               </div>
+//             )}
+//           </div>
+//         </div>
+//       ) : (
+//         // Group selection dialog
+//         <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}>
+//           <DialogTrigger asChild>
+//             <Button variant="primary">Select a Group</Button>
+//           </DialogTrigger>
+//           <DialogContent>
+//             <DialogHeader>
+//               <DialogTitle>Select a Group</DialogTitle>
+//             </DialogHeader>
+//             <div className="mt-4 space-y-2">
+//               {loading ? (
+//                 <p>Loading groups...</p>
+//               ) : (
+//                 groups.map((group) => (
+//                   <Button
+//                     key={group.group_id}
+//                     onClick={() => handleGroupSelect(group)}
+//                     variant="outline"
+//                     className="w-full"
+//                   >
+//                     {group.group_name || "Unnamed Group"}
+//                   </Button>
+//                 ))
+//               )}
+//             </div>
+//           </DialogContent>
+//         </Dialog>
+//       )}
+//     </div>
+//   );
+// };
+
+// export default GroupTask;
+
+
 // src/components/GroupTask.tsx
 
 import React, { useEffect, useState } from "react";
@@ -25,11 +453,11 @@ interface Group {
   group_name: string;
 }
 
-// Define a Task type
+// Define a Task type (keys match the backend response)
 interface Task {
   id: string;
-  name: string;
-  deadline: string; // Expected in YYYY-MM-DD format
+  task_name: string;
+  due_date: string; // Expected in YYYY-MM-DD format
   difficulty: "easy" | "mid" | "hard";
   assigned: boolean;
 }
@@ -42,53 +470,50 @@ const GroupTask: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [groupMembers, setGroupMembers] = useState<any[]>([]);
   const [assignmentResult, setAssignmentResult] = useState<any[]>([]);
+
+  // Task state and form fields
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [newTaskName, setNewTaskName] = useState("");
+  const [newTaskDeadline, setNewTaskDeadline] = useState("");
+  const [newTaskDifficulty, setNewTaskDifficulty] = useState<"easy" | "mid" | "hard">("easy");
   const [newTaskEstimatedTime, setNewTaskEstimatedTime] = useState("");
+  const [isTaskDialogOpen, setIsTaskDialogOpen] = useState<boolean>(false);
 
-  const handleAssignTasks = () => {
-    const unassignedTasks = tasks.filter((task) => !task.assigned);
-    if (groupMembers.length === 0 || unassignedTasks.length === 0) {
-      alert("Not enough group members or tasks to assign.");
-      return;
-    }
+  // Load groups when the component mounts
+  useEffect(() => {
+    const loadGroups = async () => {
+      try {
+        const data = await fetchAllGroups();
+        if (data && Array.isArray(data.groups)) {
+          setGroups(data.groups);
+        } else {
+          console.error("Unexpected data format from fetchAllGroups", data);
+        }
+      } catch (error) {
+        console.error("Error fetching groups:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadGroups();
+  }, []);
 
-    // Create a cost matrix with dimensions: groupMembers.length x unassignedTasks.length
-    // For example, use a simple cost function: cost = (rowIndex + 1) * (colIndex + 1)
-    const costMatrix = groupMembers.map((_, i) =>
-      unassignedTasks.map((task1, j) => {
-        // Map difficulty to a numeric cost factor
-        const diffMap = { "Easy": 1, "Mid": 2, "Hard": 3 };
-        const difficultyCost = diffMap[task1.difficulty] || 1;
-        console.log(task1);
-        // Calculate time remaining in days (if deadline is in the past, use 0)
-        const now = new Date();
-        const deadlineDate = new Date(task1.due_date);
-        const timeRemainingDays = Math.max(
-          (deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-          0
-        );
-        // Lower cost if deadline is near (less time remaining adds less cost)
-        return difficultyCost + timeRemainingDays;
-      })
-    );
-    console.log("groupMembers and unassigned tasks");
-    console.log(groupMembers);
-    console.log(unassignedTasks);
-    console.log("this is the cost matrix");
-    console.log(costMatrix);
-
-    // Run the main function from algo.js with the cost matrix
-    const assignment = main(costMatrix);
-    setAssignmentResult(assignment);
-    console.log("this is the assignment");
-    console.log(assignment);
+  // Handle group selection
+  const handleGroupSelect = (group: Group) => {
+    setSelectedGroup(group);
+    setIsGroupDialogOpen(false);
   };
-  // 2. Replace your current group members useEffect with this one:
+
+  // Load group members using the API response structure
   useEffect(() => {
     if (selectedGroup) {
       const loadGroupMembers = async () => {
         try {
-          const membersData = await fetchAdminGroups(selectedGroup.group_id);
-          setGroupMembers(membersData);
+          const groupsData = await fetchAdminGroups(selectedGroup.group_id);
+          const groupObj = groupsData.groups.find((x: any) => x.group_id === selectedGroup.group_id);
+          if (groupObj && groupObj.groupMembers) {
+            setGroupMembers(groupObj.groupMembers);
+          }
         } catch (error) {
           console.error("Error fetching group members:", error);
         }
@@ -97,14 +522,13 @@ const GroupTask: React.FC = () => {
     }
   }, [selectedGroup]);
 
+  // Load tasks associated with the selected group
   useEffect(() => {
     if (selectedGroup) {
       const loadGroupTasks = async () => {
         try {
           const result = await listGroupTasksApi(selectedGroup.group_id);
           if (result.success) {
-            // Assuming result.data is the array of tasks associated with the group
-            console.log(result);
             setTasks(result.data);
           } else {
             console.error("Error fetching group tasks", result.error);
@@ -117,63 +541,6 @@ const GroupTask: React.FC = () => {
     }
   }, [selectedGroup]);
 
-  // Task state and form fields
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [newTaskName, setNewTaskName] = useState("");
-  const [newTaskDeadline, setNewTaskDeadline] = useState("");
-  const [newTaskDifficulty, setNewTaskDifficulty] = useState<
-    "easy" | "mid" | "hard"
-  >("easy");
-  const [isTaskDialogOpen, setIsTaskDialogOpen] = useState<boolean>(false);
-
-  // Fetch groups when the component mounts
-  useEffect(() => {
-    const loadGroups = async () => {
-      try {
-        const data = await fetchAllGroups();
-        // Expecting data to be an object with a "groups" array
-        if (data && Array.isArray(data.groups)) {
-          setGroups(data.groups);
-        } else {
-          console.error("Unexpected data format from fetchAllGroups", data);
-        }
-      } catch (error) {
-        console.error("Error fetching groups:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadGroups();
-  }, []);
-
-  // Handle group selection
-  const handleGroupSelect = (group: Group) => {
-    setSelectedGroup(group);
-    setIsGroupDialogOpen(false);
-  };
-
-  useEffect(() => {
-    if (selectedGroup) {
-      const loadGroupMembers = async () => {
-        try {
-          //   console.log("printint members");
-          //   console.log(selectedGroup);
-          const groups = await fetchAdminGroups(selectedGroup.group_id);
-          const members = groups.groups.filter(
-            (x) => x.group_id == selectedGroup.group_id
-          )[0].groupMembers;
-          //   const membersName = members.map((x) => x.user.first_name);
-          // console.log(membersName);
-          setGroupMembers(members);
-        } catch (error) {
-          console.error("Error fetching group members:", error);
-        }
-      };
-      loadGroupMembers();
-    }
-  }, [selectedGroup]);
-
   // Handle new task submission
   const handleTaskSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -183,41 +550,66 @@ const GroupTask: React.FC = () => {
       task_name: newTaskName,
       group_id: selectedGroup?.group_id,
       due_date: newTaskDeadline,
-      // Map "mid" to "medium" if needed by the database model
+      // Map "mid" to "medium" if needed by the backend
       difficulty: newTaskDifficulty === "mid" ? "medium" : newTaskDifficulty,
       estimated_time: parseInt(newTaskEstimatedTime, 10),
     };
 
     const result = await createTaskApi(taskPayload);
     if (result.success) {
-      // Append the task returned from the database to the tasks state
       setTasks((prev) => [...prev, result.data]);
     } else {
       alert("Error adding task");
     }
-
-    // Clear form fields and close the dialog
     setNewTaskName("");
     setNewTaskDeadline("");
     setNewTaskDifficulty("easy");
-    setIsTaskDialogOpen(false);
     setNewTaskEstimatedTime("");
+    setIsTaskDialogOpen(false);
+  };
+
+  // Handle task assignment
+  const handleAssignTasks = () => {
+    const unassignedTasks = tasks.filter((task) => !task.assigned);
+    if (groupMembers.length === 0 || unassignedTasks.length === 0) {
+      alert("Not enough group members or tasks to assign.");
+      return;
+    }
+
+    // Create a cost matrix factoring in difficulty and deadline
+    const costMatrix = groupMembers.map((_, i) =>
+      unassignedTasks.map((task) => {
+        const diffMap = { easy: 1, mid: 2, hard: 3 };
+        const difficultyCost = diffMap[task.difficulty] || 1;
+        const now = new Date();
+        const deadlineDate = new Date(task.due_date);
+        const timeRemainingDays = Math.max(
+          (deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+          0
+        );
+        return difficultyCost + timeRemainingDays;
+      })
+    );
+    console.log("Cost Matrix:", costMatrix);
+    const assignment = main(costMatrix);
+    setAssignmentResult(assignment);
+    console.log("Assignment Result:", assignment);
   };
 
   return (
-    <div className="p-4">
+    <div className="p-6 bg-gray-50 min-h-screen">
       {selectedGroup ? (
         <div>
-          {/* Selected Group Header and Change Group Dialog */}
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold">Selected Group</h2>
-              <p>{selectedGroup.group_name}</p>
+          {/* Selected Group Header */}
+          <div className="mb-6 flex items-center justify-between bg-white p-4 rounded shadow">
+            <div className="flex items-center">
+              <CloudCog className="w-6 h-6 mr-2 text-blue-500" />
+              <div>
+                <h2 className="text-xl font-bold">Selected Group</h2>
+                <p className="text-gray-600">{selectedGroup.group_name}</p>
+              </div>
             </div>
-            <Dialog
-              open={isGroupDialogOpen}
-              onOpenChange={setIsGroupDialogOpen}
-            >
+            <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="primary">Change Group</Button>
               </DialogTrigger>
@@ -245,7 +637,7 @@ const GroupTask: React.FC = () => {
             </Dialog>
           </div>
 
-          {/* Add Task Button and Task Dialog */}
+          {/* Add Task Dialog */}
           <div className="mb-4">
             <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
               <DialogTrigger asChild>
@@ -302,9 +694,7 @@ const GroupTask: React.FC = () => {
                       id="taskDifficulty"
                       value={newTaskDifficulty}
                       onChange={(e) =>
-                        setNewTaskDifficulty(
-                          e.target.value as "easy" | "mid" | "hard"
-                        )
+                        setNewTaskDifficulty(e.target.value as "easy" | "mid" | "hard")
                       }
                       className="border px-4 py-2 rounded w-full"
                     >
@@ -319,9 +709,10 @@ const GroupTask: React.FC = () => {
             </Dialog>
           </div>
 
+          {/* Group Members Display */}
           {selectedGroup && groupMembers.length > 0 && (
-            <div className="mt-2">
-              <strong>Group Members: </strong>
+            <div className="mt-2 text-sm text-gray-700">
+              <strong>Group Members:</strong>{" "}
               {groupMembers.map((member, idx) => (
                 <span key={idx}>
                   {member.user.first_name}
@@ -334,98 +725,107 @@ const GroupTask: React.FC = () => {
           {/* Unassigned Tasks Table */}
           <div className="mt-8">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-lg font-bold mb-2">Unassigned Tasks</h3>
+              <h3 className="text-lg font-bold">Unassigned Tasks</h3>
               <Button variant="secondary" onClick={handleAssignTasks}>
                 Click to Assign Task
               </Button>
             </div>
             {tasks.filter((task) => !task.assigned).length === 0 ? (
-              <p>No unassigned tasks.</p>
+              <p className="text-gray-600">No unassigned tasks.</p>
             ) : (
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr>
-                    <th className="border px-4 py-2">Task Name</th>
-                    <th className="border px-4 py-2">Deadline</th>
-                    <th className="border px-4 py-2">Difficulty</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tasks
-                    .filter((task) => !task.assigned)
-                    .map((task) => (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Task Name
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Deadline
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Difficulty
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {tasks.filter((task) => !task.assigned).map((task) => (
                       <tr key={task.id}>
-                        <td className="border px-4 py-2">{task.task_name}</td>
-                        <td className="border px-4 py-2">
+                        <td className="px-4 py-2">{task.task_name}</td>
+                        <td className="px-4 py-2">
                           {new Date(task.due_date).toLocaleDateString()}
                         </td>
-                        <td className="border px-4 py-2">{task.difficulty}</td>
+                        <td className="px-4 py-2">{task.difficulty}</td>
                       </tr>
                     ))}
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
 
+          {/* Assignment Result Display */}
           {assignmentResult.length > 0 && (
-            <div className="mt-4">
-              <h3 className="text-lg font-bold">Assignment Result</h3>
+            <div className="mt-4 bg-white p-4 rounded shadow">
+              <h3 className="text-lg font-bold mb-2">Assignment Result</h3>
               {assignmentResult.map((jobs, userIndex) => (
-                <p key={userIndex}>
-                  {groupMembers[userIndex].user.first_name} is assigned jobs:{" "}
+                <p key={userIndex} className="text-gray-700">
+                  <span className="font-semibold">
+                    {groupMembers[userIndex].user.first_name}
+                  </span>{" "}
+                  is assigned:{" "}
                   {jobs
                     .map((jobIndex: number) => {
-                      const unassignedTasks = tasks.filter(
-                        (task) => !task.assigned
-                      );
-                      console.log(
-                        `User ${userIndex} jobIndex: ${jobIndex}`,
-                        "Unassigned Tasks Array:",
-                        unassignedTasks
-                      );
-                      // Check if jobIndex is valid
-                      if (jobIndex < unassignedTasks.length) {
-                        return unassignedTasks[jobIndex].task_name;
-                      } else {
-                        return "Invalid Job Index";
-                      }
+                      const unassignedTasks = tasks.filter((task) => !task.assigned);
+                      return jobIndex < unassignedTasks.length
+                        ? unassignedTasks[jobIndex].task_name
+                        : "Invalid Job Index";
                     })
                     .join(", ")}
                 </p>
               ))}
             </div>
           )}
+
           {/* Assigned Tasks Table */}
           <div className="mt-8">
             <h3 className="text-lg font-bold mb-2">Assigned Tasks</h3>
             {tasks.filter((task) => task.assigned).length === 0 ? (
-              <p>No assigned tasks.</p>
+              <p className="text-gray-600">No assigned tasks.</p>
             ) : (
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr>
-                    <th className="border px-4 py-2">Task Name</th>
-                    <th className="border px-4 py-2">Deadline</th>
-                    <th className="border px-4 py-2">Difficulty</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tasks
-                    .filter((task) => task.assigned)
-                    .map((task) => (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Task Name
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Deadline
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Difficulty
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {tasks.filter((task) => task.assigned).map((task) => (
                       <tr key={task.id}>
-                        <td className="border px-4 py-2">{task.name}</td>
-                        <td className="border px-4 py-2">{task.deadline}</td>
-                        <td className="border px-4 py-2">{task.difficulty}</td>
+                        <td className="px-4 py-2">{task.task_name}</td>
+                        <td className="px-4 py-2">
+                          {new Date(task.due_date).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-2">{task.difficulty}</td>
                       </tr>
                     ))}
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
       ) : (
-        // If no group is selected, show the group selection dialog
+        // Group selection dialog
         <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="primary">Select a Group</Button>
