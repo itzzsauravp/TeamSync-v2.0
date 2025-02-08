@@ -65,5 +65,19 @@ const deleteTask = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getTasksByGroup = async (req, res) => {
+  try {
+    const { group_id } = req.query; // Expecting the group ID as a query parameter
+    if (!group_id) {
+      return res.status(400).json({ error: "group_id is required" });
+    }
+    const tasks = await Task.findAll({
+      where: { group_id },
+    });
+    res.json(tasks);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
-export { createTask, getTasks, updateTask, deleteTask };
+export { createTask, getTasks, updateTask, deleteTask, getTasksByGroup};

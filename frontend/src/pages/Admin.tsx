@@ -71,6 +71,7 @@ import {
 import { fetchUsers } from "@/api/userApi";
 import { selectUser } from "@/store/userSlice";
 import { cn } from "@/lib/utils";
+import GroupTask from "@/components/GroupTask";
 
 // =================== MEMBER POPOVER ===================
 const MemberPopover = ({ user }: { user: any }) => {
@@ -647,14 +648,7 @@ const Admin = () => {
 
         {/* TASKS TAB */}
         <TabsContent value="tasks">
-          <Card>
-            <CardHeader>
-              <CardTitle>Tasks Module</CardTitle>
-              <CardDescription>
-                This feature is coming soon. Stay tuned for updates!
-              </CardDescription>
-            </CardHeader>
-          </Card>
+          <GroupTask />
         </TabsContent>
       </Tabs>
 

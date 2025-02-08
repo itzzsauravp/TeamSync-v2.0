@@ -185,6 +185,7 @@ const KanbanBoard = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const allTasks = Object.values(columns).flatMap(column => column.tasks);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
