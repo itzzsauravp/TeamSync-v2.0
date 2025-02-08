@@ -16,9 +16,17 @@ const { initdb, addUser, loginUser, makeGroup, addToGroup, sendMessage, getAllMe
         "last_name": "sau",
         "password": "sau"
     };
+    let user3 = {
+        "email": "bin",
+        "username": "bin",
+        "first_name": "bin",
+        "last_name": "bin",
+        "password": "bin"
+    };
     await initdb();
     await addUser(user2);
     await addUser(user1);
+    await addUser(user3);
     let temp = await loginUser(user2);
     let user2Id = temp._body.userId;
 
@@ -47,6 +55,7 @@ const { initdb, addUser, loginUser, makeGroup, addToGroup, sendMessage, getAllMe
         messageContent: "hello this is from ayu account"
     }
     let result4 = await sendMessage(groupId1, message1, token1)
+    // console.log(result4);
 
     let result5 = await getAllMessage(groupId1, token1)
     // console.log(result5._body.messages);
@@ -57,5 +66,6 @@ const { initdb, addUser, loginUser, makeGroup, addToGroup, sendMessage, getAllMe
     let colId1 = result6._body.data.column_id;
 
     let result7 = await addTask("task name 1", colId1, token1)
+//    console.log(result7);
     console.log(result7._body);
 })();
