@@ -11,6 +11,10 @@ const Groups = sequelize.define("groups", {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  weight: {
+    type: DataTypes.STRING,
+    allowNull: true, // handle null value in the frontend, compatible with existing add group function
+  },
 }, {
   timestamps: true,
 });
