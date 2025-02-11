@@ -243,10 +243,10 @@ class GroupController {
   };
 
   deleteGroup = async (req, res) => {
-    const { groupId } = req.params;
+    const { groupID } = req.params;
     const userId = req.user.user_id;
 
-    if (!groupId) {
+    if (!groupID) {
       return res.status(400).json({
         success: false,
         message: "Group ID is required",
@@ -254,7 +254,7 @@ class GroupController {
     }
 
     try {
-      const group = await Groups.findOne({ where: { group_id: groupId } });
+      const group = await Groups.findOne({ where: { group_id: groupID } });
 
       if (!group) {
         return res.status(404).json({
@@ -265,7 +265,7 @@ class GroupController {
 
       const isAdmin = await GroupMembers.findOne({
         where: {
-          group_id: groupId,
+          group_id: groupID,
           user_id: userId,
           role: "admin",
         },
@@ -278,9 +278,9 @@ class GroupController {
         });
       }
 
-      await Messages.destroy({ where: { group_id: groupId } });
-      await GroupMembers.destroy({ where: { group_id: groupId } });
-      await Groups.destroy({ where: { group_id: groupId } });
+      await Messages.destroy({ where: { group_id: groupID } });
+      await GroupMembers.destroy({ where: { group_id: groupID } });
+      await Groups.destroy({ where: { group_id: groupID } });
 
       return res.json({
         success: true,
@@ -292,6 +292,97 @@ class GroupController {
         success: false,
         message: "Failed to delete group",
       });
+    }
+  };
+  // should we check if the user is admin for that group ?
+  updateGroupWeights = async (req, res) => {
+    try {
+      const { groupID, weights } = req.body;
+      const userId = req.user.user_id;
+      const isAdmin = await GroupMembers.findOne({
+        where: { group_id: groupID, user_id: userId, role: "admin" },
+      });
+      if (!isAdmin) {
+        return res.status(403).json({
+          success: false,
+          message: "Unauthorized: Only admins can update weights",
+        });
+      }
+      const group = await Groups.findByPk(groupID);
+      if (!group) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Group not found" });
+      }
+      await group.update({ weight: weights });
+      res.status(200).json({
+        success: true,
+        message: "Weights updated successfully",
+        group,
+      });
+    } catch (error) {
+      console.error("Error updating weights:", error);
+      res
+        .status(500)
+        .json({ success: false, message: "Internal server error" });
+    }
+  };
+
+  getGroupWeights = async (req, res) => {
+    try {
+      const { groupID } = req.params;
+      const group = await Groups.findByPk(groupID, {
+        attributes: ["weight"],
+      });
+      if (!group) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Group not found" });
+      }
+      res.status(200).json({ success: true, weight: group.weight });
+    } catch (err) {
+      console.error("Error getting weights:", err);
+      res.status(500).json({ success: false, message: "Intenal server error" });
+    }
+  };
+  getGroupAndMembersDetails = async (req, res) => {
+    try {
+      const userId = req.user.user_id;
+      const adminGroups = await Groups.findAll({
+        include: [
+          {
+            model: GroupMembers,
+            where: { user_id: userId, role: "admin" },
+          },
+        ],
+      });
+      if (!adminGroups.length) {
+        return res.status(404).json({
+          success: false,
+          message: "No groups found where user is admin",
+        });
+      }
+      const groupsWithMembers = await Promise.all(
+        adminGroups.map(async (group) => {
+          const members = await GroupMembers.findAll({
+            where: { group_id: group.group_id },
+            include: [
+              {
+                model: Users,
+                attributes: { exclude: ["password"] },
+              },
+            ],
+          });
+          return { ...group.toJSON(), members };
+        })
+      );
+
+      res.status(200).json({ success: true, groups: groupsWithMembers });
+    } catch (error) {
+      console.error("Error fetching group and members detail:", error);
+      res
+        .status(500)
+        .json({ success: false, message: "Internal server error" });
     }
   };
 }

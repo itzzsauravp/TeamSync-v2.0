@@ -1,4 +1,4 @@
-import { Users } from "../models/association.js";
+import { Users, GroupMembers } from "../models/association.js";
 import { Op } from "@sequelize/core";
 
 class UserController {
@@ -82,8 +82,14 @@ class UserController {
 
   updateUserProfile = async (req, res) => {
     try {
-      const { username, first_name, last_name, phone_number, address } =
-        req.body;
+      const {
+        username,
+        first_name,
+        last_name,
+        phone_number,
+        address,
+        userExpertise,
+      } = req.body;
       const user = await Users.findByPk(req.user.user_id);
       if (!user) {
         return res
@@ -95,6 +101,7 @@ class UserController {
       user.last_name = last_name || user.last_name;
       user.phone_number = phone_number || user.phone_number;
       user.address = address || user.address;
+      user.userExpertise = userExpertise || user.userExpertise;
 
       await user.save();
       res.json({
@@ -130,6 +137,69 @@ class UserController {
         success: false,
         message: "Error deleting user",
         error_msg: err,
+      });
+    }
+  };
+
+  updateUserAttributes = async (req, res) => {
+    try {
+      const { userId, skillLevel, userBusyUntill, userExpertise } = req.body;
+      if (!userId) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Missing userId in request body" });
+      }
+      const currentUserId = req.user.user_id;
+      const adminMemberships = await GroupMembers.findAll({
+        where: { user_id: currentUserId, role: "admin" },
+        attributes: ["group_id"],
+      });
+      if (adminMemberships.length === 0) {
+        return res
+          .status(403)
+          .json({ success: false, message: "You are not admin in any group" });
+      }
+      const adminGroupIds = adminMemberships.map(
+        (membership) => membership.group_id
+      );
+      const commonMembership = await GroupMembers.findOne({
+        where: {
+          group_id: adminGroupIds,
+          user_id: userId,
+        },
+      });
+      if (!commonMembership) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not admin in a group that contains this user",
+        });
+      }
+      const targetUser = await Users.findByPk(userId);
+      if (!targetUser) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Target user not found" });
+      }
+      targetUser.skillLevel =
+        skillLevel !== undefined ? skillLevel : targetUser.skillLevel;
+      targetUser.userBusyUntill =
+        userBusyUntill !== undefined
+          ? userBusyUntill
+          : targetUser.userBusyUntill;
+      targetUser.userExpertise =
+        userExpertise !== undefined ? userExpertise : targetUser.userExpertise;
+      await targetUser.save();
+      res.status(200).json({
+        success: true,
+        message: "User attributes updated successfully",
+        user: targetUser,
+      });
+    } catch (error) {
+      console.error("Error updating user attributes:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+        error_msg: error.message,
       });
     }
   };

@@ -11,12 +11,18 @@ const {
   createOneOnOneChat,
   getUserChats,
   deleteGroup,
+  updateGroupWeights,
+  getGroupWeights,
+  getGroupAndMembersDetails
 } = new groupController();
 
 groupRouter.post("/create", authenticateJWT, createGroup);
 groupRouter.post("/add", authenticateJWT, addToGroup);
 groupRouter.post("/one-on-one", authenticateJWT, createOneOnOneChat);
-groupRouter.delete("/delete/:groupId", authenticateJWT, deleteGroup);
+groupRouter.delete("/delete/:groupID", authenticateJWT, deleteGroup);
 groupRouter.get("/list", listGroups);
 groupRouter.get("/user-chat", authenticateJWT, getUserChats);
+groupRouter.put("/update-weights", authenticateJWT, updateGroupWeights);
+groupRouter.get("/weights/:groupID", getGroupWeights);
+groupRouter.get("/list-details",authenticateJWT, getGroupAndMembersDetails);
 export default groupRouter;
