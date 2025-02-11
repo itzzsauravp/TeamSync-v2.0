@@ -46,8 +46,15 @@ const GroupTask: React.FC = () => {
   const [newTaskName, setNewTaskName] = useState("");
   const [newTaskDeadline, setNewTaskDeadline] = useState("");
   const [newTaskDifficulty, setNewTaskDifficulty] = useState<"easy" | "mid" | "hard">("easy");
-  const [newTaskEstimatedTime, setNewTaskEstimatedTime] = useState("");
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState<boolean>(false);
+  
+
+  // for adding task
+const [newTaskSkillLevel, setNewTaskSkillLevel] = useState(1);
+const [newTaskPriority, setNewTaskPriority] = useState(1);
+const [newTaskExpertise, setNewTaskExpertise] = useState("");
+const [newTaskDescription, setNewTaskDescription] = useState("");
+
 
   // Load groups when the component mounts
   useEffect(() => {
@@ -118,6 +125,60 @@ const GroupTask: React.FC = () => {
   // Handle new task submission
   const handleTaskSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+  
+    // Validate that all required fields are filled and that a group is selected
+    if (
+      !newTaskName ||
+      !newTaskSkillLevel ||
+      !newTaskDeadline ||
+      !newTaskDifficulty ||
+      !newTaskPriority ||
+      !newTaskExpertise ||
+      !newTaskDescription ||
+      !selectedGroup?.group_id
+    ) {
+      alert("Please fill in all fields.");
+      return;
+    }
+  
+    // Build the task payload using the new schema
+    const taskPayload = {
+      task_name: newTaskName,
+      taskSkillLevel: Number(newTaskSkillLevel),
+      group_id: selectedGroup.group_id,
+      estimated_time:1, // remind me to remove this,
+      due_date: newTaskDeadline,
+      difficulty: newTaskDifficulty, // Assuming the backend accepts "easy", "mid", "hard" as is
+      taskPriority: Number(newTaskPriority),
+      taskExpertise: newTaskExpertise,
+      description: newTaskDescription,
+    };
+  
+    try {
+      const result = await createTaskApi(taskPayload);
+      if (result.success) {
+        setTasks((prev) => [...prev, result.data]);
+      } else {
+        alert("Error adding task");
+      }
+    } catch (error) {
+      console.error("Error creating task:", error);
+      alert("Error adding task");
+    }
+  
+    // Reset form fields
+    setNewTaskName("");
+    setNewTaskSkillLevel(1);
+    setNewTaskDeadline("");
+    setNewTaskDifficulty("easy");
+    setNewTaskPriority(1);
+    setNewTaskExpertise("");
+    setNewTaskDescription("");
+    setIsTaskDialogOpen(false);
+  };
+  
+/*   const handleTaskSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!newTaskName || !newTaskDeadline || !newTaskDifficulty) return;
 
     const taskPayload = {
@@ -140,7 +201,7 @@ const GroupTask: React.FC = () => {
     setNewTaskDifficulty("easy");
     setNewTaskEstimatedTime("");
     setIsTaskDialogOpen(false);
-  };
+  }; */
 
   // Handle task assignment
   const handleAssignTasks = () => {
@@ -222,6 +283,82 @@ const GroupTask: React.FC = () => {
                   <DialogTitle>Add a New Task</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleTaskSubmit} className="space-y-4 mt-4">
+  <div>
+    <Label htmlFor="taskName" className="block mb-1">Task Name</Label>
+    <Input
+      id="taskName"
+      type="text"
+      value={newTaskName}
+      onChange={(e) => setNewTaskName(e.target.value)}
+      className="w-full"
+    />
+  </div>
+  <div>
+    <Label htmlFor="taskSkillLevel" className="block mb-1">Task Skill Level</Label>
+    <Input
+      id="taskSkillLevel"
+      type="number"
+      value={newTaskSkillLevel}
+      onChange={(e) => setNewTaskSkillLevel(e.target.value)}
+      className="w-full"
+    />
+  </div>
+  <div>
+    <Label htmlFor="dueDate" className="block mb-1">Due Date</Label>
+    <Input
+      id="dueDate"
+      type="date"
+      value={newTaskDeadline}
+      onChange={(e) => setNewTaskDeadline(e.target.value)}
+      className="w-full"
+    />
+  </div>
+  <div>
+    <Label htmlFor="difficulty" className="block mb-1">Difficulty</Label>
+    <select
+      id="difficulty"
+      value={newTaskDifficulty}
+      onChange={(e) => setNewTaskDifficulty(e.target.value as "easy" | "mid" | "hard")}
+      className="border px-4 py-2 rounded w-full"
+    >
+      <option value="easy">Easy</option>
+      <option value="mid">Mid</option>
+      <option value="hard">Hard</option>
+    </select>
+  </div>
+  <div>
+    <Label htmlFor="taskPriority" className="block mb-1">Task Priority</Label>
+    <Input
+      id="taskPriority"
+      type="number"
+      value={newTaskPriority}
+      onChange={(e) => setNewTaskPriority(e.target.value)}
+      className="w-full"
+    />
+  </div>
+  <div>
+    <Label htmlFor="taskExpertise" className="block mb-1">Task Expertise</Label>
+    <Input
+      id="taskExpertise"
+      type="text"
+      value={newTaskExpertise}
+      onChange={(e) => setNewTaskExpertise(e.target.value)}
+      className="w-full"
+    />
+  </div>
+  <div>
+    <Label htmlFor="description" className="block mb-1">Description</Label>
+    <textarea
+      id="description"
+      value={newTaskDescription}
+      onChange={(e) => setNewTaskDescription(e.target.value)}
+      className="border px-4 py-2 rounded w-full"
+    ></textarea>
+  </div>
+  <Button type="submit">Add Task</Button>
+</form>
+
+{/*                 <form onSubmit={handleTaskSubmit} className="space-y-4 mt-4">
                   <div>
                     <Label htmlFor="taskName" className="block mb-1">
                       Task Name
@@ -278,7 +415,7 @@ const GroupTask: React.FC = () => {
                     </select>
                   </div>
                   <Button type="submit">Add Task</Button>
-                </form>
+                </form> */}
               </DialogContent>
             </Dialog>
           </div>

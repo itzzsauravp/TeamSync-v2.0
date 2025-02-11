@@ -5,11 +5,13 @@ class UserController {
   // Get all users except the current user
   getAllUsers = async (req, res) => {
     try {
-      const users = await Users.findAll({
-        where: {
-          user_id: { [Op.ne]: req.user.user_id },
-        },
-      });
+      // const users = await Users.findAll({
+      //   where: {
+      //     user_id: { [Op.ne]: req.user.user_id },
+      //   },
+      // });
+      // why omit the current user?????
+      const users = await Users.findAll();
       if (!users || users.length === 0) {
         return res
           .status(404)
