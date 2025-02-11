@@ -104,6 +104,9 @@ class AuthController {
           "address",
           "phone_number",
           "profilePicture",
+          "userExpertise",
+          "skillLevel",
+          "userBusyUntill",
         ],
       });
       if (!user) {

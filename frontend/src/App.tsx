@@ -11,6 +11,7 @@ import Settings from "./pages/Dashboard/Settings";
 import Task from "./pages/Dashboard/Task";
 import PageNotFoundFallback from "./pages/PageNotFoundFallback";
 import Admin from "./pages/Admin";
+import Test from "./pages/Test";
 const App = () => {
   return (
     <Router>
@@ -35,6 +36,7 @@ const App = () => {
           <Route path="kanban" element={<Kanban />} />
           <Route path="admin" element={<Admin />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="test" element={<Test />} />
         </Route>
         <Route path="*" element={<PageNotFoundFallback />} />
       </Routes>

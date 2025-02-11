@@ -1753,7 +1753,6 @@ const ChatList: React.FC = () => {
       setIsLoading(true);
       try {
         const data = await fetchAllChatForUser();
-        console.log(data)
         setChats(data.chats || []);
         if (data.chats?.length > 0) {
           socket.emit(

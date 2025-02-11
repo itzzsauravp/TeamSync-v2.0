@@ -18,10 +18,54 @@ export interface Chat {
   member_count?: number;
 }
 
-// types/user.ts
+
+export interface Group {
+  group_id: string;
+  group_name: string;
+  weight: string;
+  createdAt: string;
+  updatedAt: string;
+  members: Member[];
+}
+
+export interface Member {
+  id: number;
+  group_id: string;
+  user_id: string;
+  role: string;
+  joined_at: string;
+  createdAt: string;
+  updatedAt: string;
+  user: User;
+}
+
 export interface User {
   user_id: string;
-  username: string;
   email: string;
+  gender: string;
+  username: string;
   profilePicture: string;
+  first_name: string;
+  last_name: string;
+  phone_number: string | null;
+  address: string | null;
+  skillLevel: string | null;
+  userBusyUntill: string | null;
+  userExpertise: string;
+  createdAt: string;
+  updatedAt: string;
 }
+
+export type UserState = {
+  user_id: string;
+  username: string;
+  profilePicture: string;
+  email: string;
+  gender: string;
+  first_name: string;
+  last_name: string;
+  phoneNumber: string;
+  address: string;
+  userExpertise: string;
+  isAuthenticated: boolean;
+};

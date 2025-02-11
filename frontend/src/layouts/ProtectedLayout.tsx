@@ -20,7 +20,6 @@ const ProtectedRoutes: React.FC<ProtectedRoutesProps> = ({ children }) => {
       try {
         const data = await validateToken();
         const { success, user } = data;
-
         dispatch(setUserInfo({ ...user, isAuthenticated: success }));
         setIsValidUser(success);
       } catch (err) {

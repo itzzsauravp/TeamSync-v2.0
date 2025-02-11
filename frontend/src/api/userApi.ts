@@ -1,6 +1,6 @@
 import axiosInstance from "./axiosInstance";
 
-const updateUserInformation = async (reqBody) => {
+const updateUserInformation = async (reqBody: object) => {
   try {
     const response = await axiosInstance.put("/user/profile", reqBody);
     return response.data;
@@ -18,14 +18,14 @@ const deleteUser = async () => {
   }
 };
 
-const fetchUsers = async (reqBody) => {
+const fetchUsers = async (reqBody: object) => {
   try {
     const response = await axiosInstance.post("/user/username", reqBody);
     if (!response.data?.users) {
       throw new Error("No users data received from server");
     }
     const { users } = response.data;
-    const usersWithoutPassword = users.map((item) => {
+    const usersWithoutPassword = users.map((item: object) => {
       const { password, ...userWithoutPassword } = item;
       return userWithoutPassword;
     });

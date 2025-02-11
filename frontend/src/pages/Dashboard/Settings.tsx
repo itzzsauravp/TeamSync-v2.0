@@ -17,23 +17,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Toaster, toast } from "react-hot-toast";
 import { Loader2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-interface User {
-  username: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  address: string;
-  phoneNumber: string;
-  gender: string;
-  profilePicture?: string;
-}
-
-interface SettingsProps {
-  user: User;
-}
-
-const Settings: React.FC<SettingsProps> = () => {
+const Settings = () => {
   const user = useOutletContext<UserState>();
   const {
     username,
@@ -44,11 +36,13 @@ const Settings: React.FC<SettingsProps> = () => {
     phoneNumber,
     gender,
     profilePicture,
+    userExpertise,
   } = user;
+  console.log(user);
 
+  // Local state for edit mode and loading.
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
   const [updatedUserInfo, setUpdatedUserInfo] = useState({
     username,
     email,
@@ -56,9 +50,14 @@ const Settings: React.FC<SettingsProps> = () => {
     last_name,
     address,
     phone_number: phoneNumber,
+    // Convert expertise string to array.
+    userExpertise: (userExpertise && userExpertise.split(",")) || [],
   });
 
   const navigate = useNavigate();
+
+  // Expertise options available to add.
+  const expertiseOptions = ["Frontend", "Backend", "UI/UX", "ML", "AI"];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -70,16 +69,33 @@ const Settings: React.FC<SettingsProps> = () => {
     setIsLoading(true);
     const toastId = toast.loading("Updating your credentials...");
     try {
-      const data = await updateUserInformation(updatedUserInfo);
+      const data = await updateUserInformation({
+        ...updatedUserInfo,
+        // Convert expertise array back to a comma-separated string.
+        userExpertise: updatedUserInfo.userExpertise.join(","),
+      });
       if (data.success) {
         toast.dismiss(toastId);
-        toast.success(
-          "Your credentials were changed successfully and you will have to login again"
-        );
-        setTimeout(() => {
-          localStorage.removeItem("token");
-          navigate("/auth?login=true");
-        }, 2000);
+        // Check if fields other than expertise have changed.
+        const onlyExpertiseChanged =
+          updatedUserInfo.username === username &&
+          updatedUserInfo.email === email &&
+          updatedUserInfo.first_name === first_name &&
+          updatedUserInfo.last_name === last_name &&
+          updatedUserInfo.address === address &&
+          updatedUserInfo.phone_number === phoneNumber;
+        if (onlyExpertiseChanged) {
+          toast.success("Your expertise was updated successfully!");
+          window.location.reload();
+        } else {
+          toast.success(
+            "Your credentials were changed successfully and you will have to log in again"
+          );
+          setTimeout(() => {
+            localStorage.removeItem("token");
+            navigate("/auth?login=true");
+          }, 2000);
+        }
       }
     } catch (err) {
       console.error("An error occurred during update", err);
@@ -105,6 +121,17 @@ const Settings: React.FC<SettingsProps> = () => {
     }
   };
 
+  // Add a selected expertise if it isn’t already added.
+  const handleExpertiseSelect = (selectedExpertise: string) => {
+    if (!updatedUserInfo.userExpertise.includes(selectedExpertise)) {
+      setUpdatedUserInfo({
+        ...updatedUserInfo,
+        userExpertise: [...updatedUserInfo.userExpertise, selectedExpertise],
+      });
+    }
+  };
+
+  // Cancel editing and reset changes.
   const handleCancelEdit = (e: React.MouseEvent) => {
     e.preventDefault();
     setUpdatedUserInfo({
@@ -114,15 +141,14 @@ const Settings: React.FC<SettingsProps> = () => {
       last_name,
       address,
       phone_number: phoneNumber,
+      userExpertise: (userExpertise && userExpertise.split(",")) || [],
     });
     setIsEditing(false);
   };
 
   return (
     <>
-      {/* Global Toast container */}
       <Toaster position="top-right" />
-
       <section className="py-10">
         <Card className="max-w-xl mx-auto p-6">
           <CardHeader className="text-center">
@@ -146,6 +172,7 @@ const Settings: React.FC<SettingsProps> = () => {
           <CardContent>
             <form onSubmit={handleUserUpdate}>
               <div className="space-y-6">
+                {/* General Information Section */}
                 <div>
                   <h2 className="text-xl font-semibold mb-4">
                     General Information
@@ -209,39 +236,63 @@ const Settings: React.FC<SettingsProps> = () => {
                   </div>
                 </div>
 
+                {/* Expertise Section */}
                 <div>
-                  <h2 className="text-xl font-semibold mb-4">
-                    Contact Information
-                  </h2>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div className="flex flex-col gap-2">
-                      <label htmlFor="phone_number" className="text-sm">
-                        Phone Number
-                      </label>
-                      <Input
-                        id="phone_number"
-                        name="phone_number"
-                        value={updatedUserInfo.phone_number || ""}
-                        onChange={handleInputChange}
-                        disabled={!isEditing || isLoading}
-                        placeholder={
-                          !updatedUserInfo.phone_number ? "N/A" : undefined
-                        }
-                      />
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <label htmlFor="email" className="text-sm">
-                        Email
-                      </label>
-                      <Input
-                        id="email"
-                        value={updatedUserInfo.email}
-                        disabled
-                      />
+                  <h2 className="text-xl font-semibold mb-4">Expertise</h2>
+                  <div className="flex flex-col gap-2">
+                    {/* Show the dropdown only when editing */}
+                    {isEditing && (
+                      <div className="w-full">
+                        <Select onValueChange={handleExpertiseSelect}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select expertise to add" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {expertiseOptions.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {/* Expertise is always visible */}
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {updatedUserInfo.userExpertise.map((expertise, index) =>
+                        isEditing ? (
+                          <Button
+                            key={index}
+                            type="button"
+                            variant="outline"
+                            className="text-sm flex items-center gap-1"
+                            onClick={() => {
+                              const newExpertise =
+                                updatedUserInfo.userExpertise.filter(
+                                  (item) => item !== expertise
+                                );
+                              setUpdatedUserInfo({
+                                ...updatedUserInfo,
+                                userExpertise: newExpertise,
+                              });
+                            }}
+                          >
+                            {expertise} <span>×</span>
+                          </Button>
+                        ) : (
+                          <span
+                            key={index}
+                            className="px-3 py-1 rounded-full bg-gray-200 text-sm"
+                          >
+                            {expertise}
+                          </span>
+                        )
+                      )}
                     </div>
                   </div>
                 </div>
 
+                {/* Form Action Buttons */}
                 <div className="flex justify-between gap-4">
                   {!isEditing ? (
                     <Button
@@ -271,6 +322,7 @@ const Settings: React.FC<SettingsProps> = () => {
                         )}
                       </Button>
                       <Button
+                        type="button"
                         variant="outline"
                         onClick={handleCancelEdit}
                         disabled={isLoading}
@@ -283,6 +335,8 @@ const Settings: React.FC<SettingsProps> = () => {
               </div>
             </form>
           </CardContent>
+
+          {/* Delete Account Section */}
           <div className="flex justify-center gap-4 mt-6">
             <AlertDialog>
               <AlertDialogTrigger asChild>

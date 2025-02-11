@@ -345,6 +345,7 @@ class GroupController {
       res.status(500).json({ success: false, message: "Intenal server error" });
     }
   };
+
   getGroupAndMembersDetails = async (req, res) => {
     try {
       const userId = req.user.user_id;
@@ -364,6 +365,8 @@ class GroupController {
       }
       const groupsWithMembers = await Promise.all(
         adminGroups.map(async (group) => {
+          const groupData = group.toJSON();
+          delete groupData.groupMembers;
           const members = await GroupMembers.findAll({
             where: { group_id: group.group_id },
             include: [
@@ -373,11 +376,23 @@ class GroupController {
               },
             ],
           });
-          return { ...group.toJSON(), members };
+          if (members.length > 2) {
+            return { ...groupData, members };
+          } else {
+            return null;
+          }
         })
       );
-
-      res.status(200).json({ success: true, groups: groupsWithMembers });
+      const filteredGroups = groupsWithMembers.filter(
+        (group) => group !== null
+      );
+      if (!filteredGroups.length) {
+        return res.status(404).json({
+          success: false,
+          message: "No groups found with more than two members",
+        });
+      }
+      res.status(200).json({ success: true, groups: filteredGroups });
     } catch (error) {
       console.error("Error fetching group and members detail:", error);
       res

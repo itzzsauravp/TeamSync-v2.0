@@ -1,17 +1,5 @@
+import { UserState } from "@/types/main";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-
-export type UserState = {
-  user_id: string;
-  username: string;
-  profilePicture: string;
-  email: string;
-  gender: string;
-  first_name: string;
-  last_name: string;
-  phoneNumber: string;
-  address: string;
-  isAuthenticated: boolean;
-};
 
 const initialState: UserState = {
   user_id: "",
@@ -23,6 +11,7 @@ const initialState: UserState = {
   last_name: "",
   phoneNumber: "",
   address: "",
+  userExpertise: "" ,
   isAuthenticated: false,
 };
 

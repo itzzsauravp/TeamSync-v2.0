@@ -68,6 +68,38 @@ const deleteGroup = async (groupId: string) => {
   }
 };
 
+const fetchWeights = async (groupID: string) => {
+  try {
+    const { data } = await axiosInstance.get(`/group/weights/${groupID}`);
+    return data.weight;
+  } catch (err) {
+    console.error("Error while fetching group's weights:", err);
+    return { success: false };
+  }
+};
+
+const updateWeights = async (groupID: string, weights: string) => {
+  try {
+    const { data } = await axiosInstance.put("/group/update-weights", {
+      groupID,
+      weights,
+    });
+    return data;
+  } catch (err) {
+    console.error("Error while updating group's weights:", err);
+    return { success: false };
+  }
+};
+// gets the details of all the group and thier members where the current user is admin.
+const fetchGroupAndMembersDetail = async () => {
+  try {
+    const data = await axiosInstance.get("/group/list-details");
+    return data
+  } catch (err) {
+    console.error("Error while fetching groups and member dtails:", err);
+    return { success: false };
+  }
+};
 
 export {
   fetchAllGroups,
@@ -76,4 +108,7 @@ export {
   fetchAllChatForUser,
   addUserToGroup,
   deleteGroup,
+  fetchWeights,
+  updateWeights,
+  fetchGroupAndMembersDetail,
 };

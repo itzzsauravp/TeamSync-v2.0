@@ -20,12 +20,10 @@ const Index = () => {
   const [date, setDate] = useState(new Date());
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
   const [recentChats, setRecentChats] = useState<any[]>([]);
-  console.log(upcomingEvents);
   useEffect(() => {
     const fetchEvents = async () => {
       try {
         const res = await getAllGroupEvents();
-
         setUpcomingEvents(res);
       } catch (error) {
         console.error("Error fetching events:", error);
