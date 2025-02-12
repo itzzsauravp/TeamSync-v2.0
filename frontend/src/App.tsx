@@ -12,6 +12,7 @@ import Task from "./pages/Dashboard/Task";
 import PageNotFoundFallback from "./pages/PageNotFoundFallback";
 import Admin from "./pages/Admin";
 import Test from "./pages/Test";
+import TaskManagementPage from "./pages/Dashboard/TaskManagementPage";
 const App = () => {
   return (
     <Router>
@@ -36,7 +37,8 @@ const App = () => {
           <Route path="kanban" element={<Kanban />} />
           <Route path="admin" element={<Admin />} />
           <Route path="settings" element={<Settings />} />
-          <Route path="test" element={<Test />} />
+          <Route path="group" element={<Test />} />
+          <Route path="group/:groupId" element={<TaskManagementPage />} />
         </Route>
         <Route path="*" element={<PageNotFoundFallback />} />
       </Routes>

@@ -71,6 +71,13 @@ const data = {
       icon: Settings2,
       isActive: true,
     },
+    {
+      title: "Task Handler",
+      url: "group",
+      icon: Settings2,
+      isActive: true,
+    },
+
   ],
 };
 
