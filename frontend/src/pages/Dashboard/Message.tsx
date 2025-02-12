@@ -50,7 +50,14 @@ import {
 } from "@/components/ui/tooltip";
 import { IoSend, IoSearch } from "react-icons/io5";
 import { BsThreeDotsVertical } from "react-icons/bs";
-import { FileIcon, Loader2, PaperclipIcon, Plus, Trash2 } from "lucide-react";
+import {
+  CookingPot,
+  FileIcon,
+  Loader2,
+  PaperclipIcon,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -149,7 +156,7 @@ interface UserListItemProps {
 }
 const ChatInterfaceInput: React.FC<ChatInterfaceInputProps> = ({ groupID }) => {
   const [message, setMessage] = useState<string>("");
-  const [selectedFiles, setSelectedFiles] = useState<FilePreview[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
   const [isSending, setIsSending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -284,7 +291,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   const [editMessage, setEditMessage] = useState(message.message_content);
   const [editFile, setEditFile] = useState<File | null>(null);
   const [editFilePreview, setEditFilePreview] = useState<string | null>(null);
-
   useEffect(() => {
     if (
       message.file_name &&
@@ -357,7 +363,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     try {
       let updated;
       if (message.file_name) {
-        
         if (!editFile) {
           alert("Please select a new file to update this file message.");
           return;
@@ -587,16 +592,14 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ groupID }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const dispatch = useDispatch();
 
-  // When the groupID changes, clear previous messages first.
   useEffect(() => {
-    setMessages([]); // Clear previous messages immediately.
+    setMessages([]);
     const loadMessages = async () => {
       setIsLoading(true);
       try {
         const data = await getAllMessages(groupID);
         const msgs: Message[] = data.messages || [];
         setMessages(msgs);
-        // Update the Redux store with the last message (if any)
         dispatch(
           setLastMessage({
             groupID,
@@ -612,14 +615,15 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ groupID }) => {
     loadMessages();
   }, [groupID, dispatch]);
 
-  // Socket listeners for real‑time updates
   useEffect(() => {
     const handleNewMessage = (message: Message) => {
-      setMessages((prev) => {
-        const newMessages = [...prev, message];
-        dispatch(setLastMessage({ groupID, lastMessage: message }));
-        return newMessages;
-      });
+      if (message.group_id === groupID) {
+        setMessages((prev) => {
+          const newMessages = [...prev, message];
+          dispatch(setLastMessage({ groupID, lastMessage: message }));
+          return newMessages;
+        });
+      }
     };
 
     const handleUpdateMessage = (updatedMessage: Message) => {
@@ -627,7 +631,6 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ groupID }) => {
         const newMessages = prevMessages.map((msg) =>
           msg.message_id === updatedMessage.message_id ? updatedMessage : msg
         );
-        // If the updated message is the last one, update the store.
         if (
           newMessages.length > 0 &&
           newMessages[newMessages.length - 1].message_id ===

@@ -15,16 +15,26 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { getAllGroupEvents } from "@/api/eventApi";
 import { fetchAllChatForUser } from "@/api/groupApi";
-
+import { listUserTasksApi, listGroupTasksApi } from "@/api/taskApi";
+import { useSelector } from "react-redux";
+import { selectUser } from "@/store/userSlice";
+import { cn } from "@/lib/utils";
 const Index = () => {
   const [date, setDate] = useState(new Date());
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
   const [recentChats, setRecentChats] = useState<any[]>([]);
+  const [usersTasks, setUsersTasks] = useState([]);
+  const { user_id, skillLevel } = useSelector(selectUser);
   useEffect(() => {
     const fetchEvents = async () => {
       try {
         const res = await getAllGroupEvents();
         setUpcomingEvents(res);
+        const resp = await listUserTasksApi(user_id);
+        console.log(resp.data.tasks);
+        if (resp.success) {
+          setUsersTasks(resp.data.tasks);
+        }
       } catch (error) {
         console.error("Error fetching events:", error);
       }
@@ -46,7 +56,6 @@ const Index = () => {
 
     fetchChats();
   }, []);
-
   return (
     <div className="p-6 space-y-6">
       {/* Welcome Section */}
@@ -74,9 +83,11 @@ const Index = () => {
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24</div>
-            <p className="text-xs text-muted-foreground">+2 from yesterday</p>
-            <Progress value={75} className="mt-2" />
+            <div className="text-2xl font-bold">{usersTasks.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Tasks assigned to you
+            </p>
+            <Progress value={usersTasks.length} max={10} className="mt-2" />
           </CardContent>
         </Card>
 
@@ -86,11 +97,17 @@ const Index = () => {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
-            <p className="text-xs text-muted-foreground">
-              12 hours average time
-            </p>
-            <Progress value={45} className="mt-2" />
+            <div className="text-2xl font-bold">
+              {usersTasks.filter((item) => item.status === "pending").length}
+            </div>
+            <p className="text-xs text-muted-foreground">Your pending tasks</p>
+            <Progress
+              value={
+                usersTasks.filter((item) => item.status === "pending").length
+              }
+              max={10}
+              className="mt-2"
+            />
           </CardContent>
         </Card>
 
@@ -100,23 +117,31 @@ const Index = () => {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">16</div>
-            <p className="text-xs text-muted-foreground">+4 since last week</p>
-            <Progress value={85} className="mt-2" />
+            <div className="text-2xl font-bold">
+              {usersTasks.filter((item) => item.status === "complete").length}
+            </div>
+            <p className="text-xs text-muted-foreground">You have completed</p>
+            <Progress
+              value={
+                usersTasks.filter((item) => item.status === "complete").length
+              }
+              max={10}
+              className="mt-2"
+            />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">
-              Active Members
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Skill Level</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground">3 currently online</p>
-            <Progress value={65} className="mt-2" />
+            <div className="text-2xl font-bold">{skillLevel || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Your current skill level
+            </p>
+            <Progress value={skillLevel || 0} max={5} className="mt-2" />
           </CardContent>
         </Card>
       </div>
@@ -247,36 +272,48 @@ const Index = () => {
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[300px] pr-4">
-              {[1, 2, 3, 4, 5].map((_, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-4 mb-4 p-2 rounded-lg hover:bg-accent transition-colors"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="font-medium">Update User Interface</p>
-                      <Badge variant={i % 2 === 0 ? "default" : "secondary"}>
-                        {i % 2 === 0 ? "In Progress" : "Review"}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex -space-x-2">
-                        <Avatar className="h-6 w-6 border-2 border-background">
-                          <AvatarImage src={`/api/placeholder/24/24`} />
-                          <AvatarFallback>U1</AvatarFallback>
-                        </Avatar>
-                        <Avatar className="h-6 w-6 border-2 border-background">
-                          <AvatarImage src={`/api/placeholder/24/24`} />
-                          <AvatarFallback>U2</AvatarFallback>
-                        </Avatar>
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        Due in 2 days
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+              {usersTasks.map(
+                (task, i) =>
+                  task.status === "pending" && (
+                    <Card
+                      key={i}
+                      className="mb-4 p-4 hover:shadow-md transition-shadow"
+                    >
+                      <CardHeader className="flex flex-col items-start">
+                        <CardTitle className="flex items-center justify-between w-full">
+                          <span>{task.task_name}</span>
+                          <Badge
+                            variant={
+                              task.status === "pending"
+                                ? "default"
+                                : "secondary"
+                            }
+                          >
+                            {task.status}
+                          </Badge>
+                        </CardTitle>
+                        <CardDescription>{task.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex justify-between text-sm text-muted-foreground">
+                        <span
+                          className={cn(
+                            new Date().getTime() >=
+                              new Date(task.due_date).getTime() &&
+                              "text-red-500"
+                          )}
+                        >
+                          Due on {new Date(task.due_date).toLocaleDateString()}{" "}
+                          {new Date().getTime() >=
+                            new Date(task.due_date).getTime() && (
+                            <span className="font-bold">
+                              (Deadline crossed)
+                            </span>
+                          )}
+                        </span>
+                      </CardContent>
+                    </Card>
+                  )
+              )}
             </ScrollArea>
           </CardContent>
         </Card>
