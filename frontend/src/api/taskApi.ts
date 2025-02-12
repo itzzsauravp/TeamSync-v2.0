@@ -45,5 +45,16 @@ import axiosInstance from "./axiosInstance";
       return { success: false, error };
     }
   }
+  async function listUserTasksApi(user_id){
+    try {
+      const response = await axiosInstance.post("task/listByUser", {user_id});
+      console.log("this is api from frontend");
+      console.log(response);
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error("Error fetching group tasks:", error);
+      return { success: false, error };
+    }
+  }
 
-export {addTask, removeTask, listTask, createTaskApi, listGroupTasksApi};
+export {addTask, removeTask, listTask, createTaskApi, listGroupTasksApi, listUserTasksApi};

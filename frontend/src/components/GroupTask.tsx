@@ -28,7 +28,6 @@ interface Task {
     task_id: string; // changed from id to task_id to match backend and model
     task_name: string;
     due_date: string; // Expected in YYYY-MM-DD format
-    difficulty: "easy" | "mid" | "hard";
     status: string; // Add status to Task type
     assigned_to: string | null; // Add assigned_to to Task type, can be null if not assigned
     // removed 'assigned: boolean;' as it's no longer relevant and replaced by assigned_to
@@ -135,7 +134,6 @@ const GroupTask: React.FC = () => {
             !newTaskName ||
             !newTaskSkillLevel ||
             !newTaskDeadline ||
-            !newTaskDifficulty ||
             !newTaskPriority ||
             !newTaskExpertise ||
             !newTaskDescription ||
@@ -152,7 +150,6 @@ const GroupTask: React.FC = () => {
             group_id: selectedGroup.group_id,
             estimated_time: 1, // remind me to remove this,
             due_date: newTaskDeadline,
-            difficulty: newTaskDifficulty, // Assuming the backend accepts "easy", "mid", "hard" as is
             taskPriority: Number(newTaskPriority),
             taskExpertise: newTaskExpertise,
             description: newTaskDescription,
@@ -300,25 +297,6 @@ const GroupTask: React.FC = () => {
                                             onChange={(e) => setNewTaskDeadline(e.target.value)}
                                             className="w-full"
                                         />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="difficulty" className="block mb-1">
-                                            Difficulty
-                                        </Label>
-                                        <select
-                                            id="difficulty"
-                                            value={newTaskDifficulty}
-                                            onChange={(e) =>
-                                                setNewTaskDifficulty(
-                                                    e.target.value as "easy" | "mid" | "hard"
-                                                )
-                                            }
-                                            className="border px-4 py-2 rounded w-full"
-                                        >
-                                            <option value="easy">Easy</option>
-                                            <option value="mid">Mid</option>
-                                            <option value="hard">Hard</option>
-                                        </select>
                                     </div>
                                     <div>
                                         <Label htmlFor="taskPriority" className="block mb-1">
