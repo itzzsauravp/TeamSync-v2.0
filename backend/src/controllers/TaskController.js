@@ -76,4 +76,56 @@ const getTasksByGroup = async (req, res) => {
   }
 };
 
-export { createTask, getTasks, updateTask, deleteTask, getTasksByGroup};
+const assignUserToTask = async (req, res) => {
+  try {
+    const { task_id } = req.body; 
+    const { user_id } = req.body;
+
+    if (!task_id) {
+      return res.status(400).json({ message: "Task ID is required." });
+    }
+
+    if (!user_id) {
+      return res.status(400).json({ message: "User ID is required to assign." });
+    }
+
+    // Check if the task exists (optional but recommended)
+    const task = await Task.findByPk(task_id);
+    if (!task) {
+      return res.status(404).json({ message: "Task not found." });
+    }
+
+    // You might want to check if the user exists as well in your users table
+    // before assigning, but for this example, we'll assume userId is valid.
+
+    const updatedTask = await Task.update(
+      { assigned_to: user_id }, // Fields to update
+      {
+        where: {
+          task_id: task_id,    // Condition to find the task
+        },
+      }
+    );
+
+    if (updatedTask[0] === 0) {
+      // updatedTask is an array, and the first element is the number of rows affected.
+      // If it's 0, no rows were updated, which might mean task not found again (unlikely here)
+      return res.status(404).json({ message: "Task not found or no changes applied." }); // More generic message
+    }
+
+    // Fetch the updated task to return in the response (optional)
+    const fetchedUpdatedTask = await Task.findByPk(task_id);
+
+
+    res.status(200).json({
+      message: "User assigned to task successfully.",
+      task: fetchedUpdatedTask, // Optionally return the updated task
+    });
+
+  } catch (error) {
+    console.error("Error assigning user to task:", error);
+    res.status(500).json({ message: "Error assigning user to task.", error: error.message });
+  }
+};
+
+export { createTask, getTasks, updateTask, deleteTask, getTasksByGroup, assignUserToTask};

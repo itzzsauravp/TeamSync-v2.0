@@ -6,14 +6,14 @@
 // https://www.researchgate.net/publication/344171921_Modified_Hungarian_method_for_unbalanced_assignment_problem_with_multiple_jobs
 
 // this is from knogis theorum website
-let costMatrixEg3 = [
-  [2, 8, 5, 1, 9],
- [7, 3, 6, 4, 0],
- [1, 5, 9, 2, 7],
- [6, 0, 3, 8, 4]
-]
+// let costMatrixEg3 = [
+//   [2, 8, 5, 1, 9],
+//  [7, 3, 6, 4, 0],
+//  [1, 5, 9, 2, 7],
+//  [6, 0, 3, 8, 4]
+// ]
 
-function main(costMatrix) {
+function hungarian(costMatrix) {
     const originalCost = structuredClone(costMatrix);
     const row = costMatrix.length;
     const col = costMatrix[0].length;
@@ -47,7 +47,7 @@ function main(costMatrix) {
     return result;
 }
 
-export default main;
+export default hungarian;
 
 function addJob(oldResult, newResult) {
     // merge the old assigned and the newly assigned
@@ -292,26 +292,6 @@ function maxBipartite(matrix, edges) {
         // Return the best result found
         return [resultMax, allTimeBest];
     }
-}
-
-function setIntersect(a, b) {
-    const result = new Set();
-    a.forEach((element) => {
-        if (b.has(element)) {
-            result.add(element);
-        }
-    })
-    return result;
-}
-
-function setDiff(a, b) {
-    const result = new Set();
-    a.forEach((element) => {
-        if (!b.has(element)) {
-            result.add(element);
-        }
-    })
-    return result;
 }
 
 function loopThroughCol(costMatrix) {
