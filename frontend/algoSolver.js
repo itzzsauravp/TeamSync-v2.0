@@ -110,6 +110,9 @@ async function userAvailability(user, task) {
   let oldestTime = new Date();
   //   console.log(currTime);
   let temp = await listUserTasksApi(user.user_id);
+  console.log("these are the tasks of the use");
+  console.log(user.user_id);
+  console.log(temp);
   if (temp.success == false) {
     return result;
   }
