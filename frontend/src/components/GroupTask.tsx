@@ -126,10 +126,12 @@ const GroupTask: React.FC = () => {
   const [skillLevels, setSkillLevels] = useState({});
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
-  const [reviewGroup, setReviewGroup] = useState();
+  // this actually means review task
+  const [reviewGroup, setReviewGroup] = useState({});
 
   const handleReviewSubmit = async () => {
-    const res = await updateTaskApi({taskQuality: rating}, reviewGroup.task_id);
+    if (!reviewGroup) return;
+    const res = await updateTaskApi({taskQuality: rating, status: "complete"}, reviewGroup.task_id);
     console.log(res);
     setRating(0);
     setReviewOpen(false);
