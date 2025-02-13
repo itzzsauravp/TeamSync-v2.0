@@ -1,9 +1,8 @@
 import { Messages, Users, Groups } from "../models/association.js";
 import GroupMembers from "../models/GroupMembers.js";
 import { io } from "../socket/socket.js";
-
+import { encryptMessage, decryptMessage } from "../utils/cryptoUtil.js";
 class MessageController {
-  // ----- Send Text Message -----
   sendMessage = async (req, res) => {
     const { messageContent, groupID } = req.body;
     const sender_id = req.user.user_id;
@@ -36,10 +35,12 @@ class MessageController {
         });
       }
 
+      const encryptedContent = encryptMessage(messageContent);
+
       const newMessage = await Messages.create({
         sender_id,
         group_id: groupID,
-        message_content: messageContent,
+        message_content: encryptedContent,
       });
 
       const formattedMessage = await Messages.findByPk(newMessage.message_id, {
@@ -53,27 +54,27 @@ class MessageController {
       }).then((message) => ({
         message_id: message.message_id,
         sender_id: message.sender_id,
+        message_content: decryptMessage(message.message_content),
         sender: message.user?.username || "Unknown",
-        message_content: message.message_content,
         sent_at: message.sent_at,
         profilePicture: message.user?.profilePicture,
         is_current_user: message.sender_id === req.user.user_id,
+        group_id: groupID,
       }));
       io.to(groupID).emit("newMessage", formattedMessage);
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         message: formattedMessage,
       });
     } catch (err) {
       console.error("Error sending message:", err);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: "Error occurred while sending the message",
       });
     }
   };
 
-  // ----- Get All Messages -----
   getAllMessage = async (req, res) => {
     const { groupID } = req.params;
     const currentUserId = req.user.user_id;
@@ -103,21 +104,24 @@ class MessageController {
           message: "No messages were found",
         });
       }
+
       const formattedMessages = messages.map((message) => ({
         message_id: message.message_id,
         sender_id: message.sender_id,
         sender: message.user ? message.user.username : "Unknown",
-        message_content: message.message_content,
-        file_name: message.file_name, // include file info
+        message_content: decryptMessage(message.message_content),
+        file_name: message.file_name,
         file_type: message.file_type,
         sent_at: message.sent_at,
-        profilePicture: message.user.profilePicture,
+        profilePicture: message.user?.profilePicture,
         is_current_user: message.sender_id === currentUserId,
+        group_id: groupID,
       }));
-      res.json({ success: true, messages: formattedMessages });
+
+      return res.json({ success: true, messages: formattedMessages });
     } catch (err) {
       console.error("Error fetching messages:", err);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: "An error occurred while retrieving all messages",
       });
@@ -160,12 +164,11 @@ class MessageController {
         sender_id: msg.sender_id,
         sender: msg.user?.username || "Unknown",
         message_content: msg.message_content,
-        file_name: msg.file_name, // in case it’s a file message too
+        file_name: msg.file_name,
         file_type: msg.file_type,
         sent_at: msg.sent_at,
         profilePicture: msg.user?.profilePicture,
         is_current_user: msg.sender_id === req.user.user_id,
-        // Use the timestamps to determine if edited.
         edited: msg.updatedAt.getTime() !== msg.createdAt.getTime(),
       }));
 
@@ -275,6 +278,7 @@ class MessageController {
         sent_at: message.sent_at,
         profilePicture: message.user?.profilePicture,
         is_current_user: message.sender_id === req.user.user_id,
+        group_id: groupID,
       }));
 
       io.to(groupID).emit("newMessage", formattedMessage);
