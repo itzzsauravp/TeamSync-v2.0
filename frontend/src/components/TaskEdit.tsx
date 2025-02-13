@@ -371,18 +371,6 @@ const TaskEdit: React.FC<TaskEditProps> = ({ task, onClose, onSave }) => {
                 className="border px-4 py-2 rounded w-full h-20" // Adjust height as needed
               />
             </div>
-
-            <div>
-              <Label htmlFor="estimated_time">Estimated Time</Label>
-
-              <Input
-                type="number"
-                name="estimated_time"
-                value={editedTask.estimated_time.toString()}
-                onChange={handleInputChange}
-                className="w-full"
-              />
-            </div>
           </div>
           {/* Close grid */}
           <Button onClick={handleSave} className="mt-4">
