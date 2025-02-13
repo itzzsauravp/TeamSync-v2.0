@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { fetchAdminGroups } from "../api/groupMemberApi";
-import { listGroupTasksApi, createTaskApi, assignTaskApi, deleteTaskApi } from "../api/taskApi.js";
+import {
+  listGroupTasksApi,
+  createTaskApi,
+  assignTaskApi,
+  deleteTaskApi,
+} from "../api/taskApi.js";
 import { updateWeights } from "../api/groupApi";
 import solver from "../../algoSolver.js";
 import Test from "../pages/Test";
@@ -10,6 +15,8 @@ import TaskEdit from "./TaskEdit.js";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -21,6 +28,7 @@ import { CloudCog } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Settings } from "lucide-react";
+import { updateUserAttributes } from "@/api/userApi.js";
 
 // Define a Group type based on the API response
 interface Group {
@@ -57,7 +65,7 @@ const GroupTask: React.FC = () => {
   const [isGroupDialogOpen, setIsGroupDialogOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [groupMembers, setGroupMembers] = useState<any[]>([]);
-  const [weights, setWeights] = useState<number[]>([1,1,1,1]);
+  const [weights, setWeights] = useState<number[]>([1, 1, 1, 1]);
   const [error, setError] = useState<string | null>(null);
 
   // Task state and form fields
@@ -79,6 +87,53 @@ const GroupTask: React.FC = () => {
   const [selectAllUsers, setSelectAllUsers] = useState<boolean>(false);
   const [selectAllTasks, setSelectAllTasks] = useState<boolean>(false);
 
+  // this will be used to update the user's skill level
+  const [skillLevels, setSkillLevels] = useState({});
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
+  useEffect(() => {
+    const initialSkillLevels = {};
+    groupMembers.forEach((member) => {
+      // If no skillLevel is set, default to 1.
+      initialSkillLevels[member.user.user_id] = member.user.skillLevel || 1;
+    });
+    setSkillLevels(initialSkillLevels);
+  }, [groupMembers]);
+
+  const handleSliderChange = (userId, newValue) => {
+    setSkillLevels((prev) => ({
+      ...prev,
+      [userId]: Number(newValue),
+    }));
+  };
+
+  const saveSkillLevel = async () => {
+    try {
+      const responses = await Promise.all(
+        Object.entries(skillLevels).map(async ([userId, skillLevel]) => {
+          const response = await updateUserAttributes({ userId, skillLevel });
+          return { userId, response };
+        })
+      );
+      console.log("Updated Skill Levels:", responses);
+      const allSuccessful = responses.every(
+        (item) => item.response?.data?.success
+      );
+      if (allSuccessful) {
+        setSuccessMessage("Skill levels updated successfully!");
+        setShowSuccessDialog(true);
+      } else {
+        setSuccessMessage("Some updates may have failed. Please try again.");
+        setShowSuccessDialog(true);
+      }
+    } catch (error) {
+      console.error("Error updating skill levels:", error);
+      setSuccessMessage("An error occurred while updating. Please try again.");
+      setShowSuccessDialog(true);
+    }
+  };
+
   // NEW: Recommended assignment state (returned from the solver)
   const [recommendedAssignments, setRecommendedAssignments] = useState<any[]>(
     []
@@ -90,7 +145,7 @@ const GroupTask: React.FC = () => {
     setEditingTask(task);
   };
   // Function to handle task delete
-  const handleDeleteTask = async(taskId: string) => {
+  const handleDeleteTask = async (taskId: string) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this task?"
     );
@@ -233,7 +288,7 @@ const GroupTask: React.FC = () => {
   // load weight
   useEffect(() => {
     if (!selectedGroup) return;
-    if (!selectedGroup.weight  || selectedGroup.weight == null) {
+    if (!selectedGroup.weight || selectedGroup.weight == null) {
       setWeights([1, 1, 1, 1]);
       return;
     }
@@ -309,7 +364,7 @@ const GroupTask: React.FC = () => {
 
   // Approve a recommended assignment. This updates the task to mark it as assigned,
   // then removes the recommendation from the list.
-  
+
   // const handleApproveAssignment = (index: number) => {
   //   const assignment = recommendedAssignments[index];
   //   // Update tasks state: mark the task as assigned to the user returned from the solver
@@ -319,7 +374,7 @@ const GroupTask: React.FC = () => {
   //         console.log("call the function to assign here");
   //         console.log(assignment);
   //         const result = await assignTaskApi(assignment.task.task_id, assignment.user.user_id);
-          
+
   //         return {
   //           ...task,
   //           assigned_to: assignment.user.user_id,
@@ -333,40 +388,42 @@ const GroupTask: React.FC = () => {
   //   setRecommendedAssignments((prev) => prev.filter((_, i) => i !== index));
   // };
   const handleApproveAssignment = async (index: number) => {
-        const assignment = recommendedAssignments[index];
-        if (!assignment) {
-          console.error("Assignment not found at index:", index);
-          return; // Exit if assignment is not found
-        }
-    
-        try {
-          console.log("call the function to assign here");
-          console.log(assignment);
-          const result = await assignTaskApi( assignment.user.user_id,assignment.task.task_id);
-          console.log("assignTaskApi result:", result); // Log the result of the API call
-    
-          // Update tasks state: mark the task as assigned to the user returned from the solver
-          setTasks((prevTasks) =>
-            prevTasks.map((task) => {
-              if (task.task_id === assignment.task.task_id) {
-                return {
-                  ...task,
-                  assigned_to: assignment.user.user_id,
-                  status: "assigned",
-                };
-              }
-              return task;
-             })
-          );
-    
-          // Remove the approved assignment from the recommended list
-          setRecommendedAssignments((prev) => prev.filter((_, i) => i !== index));
-    
-        } catch (error) {
-          console.error("Error assigning task:", error);
-          // Handle error appropriately, e.g., show an error message to the user
-        }
-      }; 
+    const assignment = recommendedAssignments[index];
+    if (!assignment) {
+      console.error("Assignment not found at index:", index);
+      return; // Exit if assignment is not found
+    }
+
+    try {
+      console.log("call the function to assign here");
+      console.log(assignment);
+      const result = await assignTaskApi(
+        assignment.user.user_id,
+        assignment.task.task_id
+      );
+      console.log("assignTaskApi result:", result); // Log the result of the API call
+
+      // Update tasks state: mark the task as assigned to the user returned from the solver
+      setTasks((prevTasks) =>
+        prevTasks.map((task) => {
+          if (task.task_id === assignment.task.task_id) {
+            return {
+              ...task,
+              assigned_to: assignment.user.user_id,
+              status: "assigned",
+            };
+          }
+          return task;
+        })
+      );
+
+      // Remove the approved assignment from the recommended list
+      setRecommendedAssignments((prev) => prev.filter((_, i) => i !== index));
+    } catch (error) {
+      console.error("Error assigning task:", error);
+      // Handle error appropriately, e.g., show an error message to the user
+    }
+  };
 
   // Dismiss a recommended assignment (remove it from the recommended list)
   const handleDismissAssignment = (index: number) => {
@@ -701,55 +758,123 @@ const GroupTask: React.FC = () => {
           </div>
           {/* Weights Section with a fixed width */}
           {isWeightsVisible && (
-            <div className="mt-6 p-4 border rounded w-64 mx-auto">
-              <div>
-                <div className="flex justify-around mb-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExpertisePriority}
-                  >
-                    Experties
+            <div>
+              <div className="mt-6 p-4 border rounded w-64 mx-auto">
+                <div>
+                  <div className="flex justify-around mb-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExpertisePriority}
+                    >
+                      Experties
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSkillPriority}
+                    >
+                      Skill
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleTaskPriorityPreset}
+                    >
+                      Task Priority
+                    </Button>
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">Weights</h3>
+                  <div className="space-y-4">
+                    {weights.map((weight, index) => (
+                      <div key={index} className="flex items-center space-x-2">
+                        <span className="w-32 text-sm">
+                          {weightLabels[index] || `Weight ${index + 1}`}
+                        </span>
+                        <Slider
+                          value={[weight]}
+                          min={0}
+                          max={2}
+                          step={0.01}
+                          onValueChange={(val: number[]) =>
+                            handleWeightChange(index, val[0])
+                          }
+                        />
+                        <span className="w-12 text-sm">
+                          {weight.toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <Button onClick={handleSaveWeights} className="mt-2 w-full">
+                    Save Weights
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSkillPriority}
-                  >
-                    Skill
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleTaskPriorityPreset}
-                  >
-                    Task Priority
-                  </Button>
+                  {error && (
+                    <p className="mt-2 text-red-500 text-sm">{error}</p>
+                  )}
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Weights</h3>
-                <div className="space-y-4">
-                  {weights.map((weight, index) => (
-                    <div key={index} className="flex items-center space-x-2">
-                      <span className="w-32 text-sm">
-                        {weightLabels[index] || `Weight ${index + 1}`}
-                      </span>
-                      <Slider
-                        value={[weight]}
-                        min={0}
-                        max={2}
-                        step={0.01}
-                        onValueChange={(val: number[]) =>
-                          handleWeightChange(index, val[0])
-                        }
-                      />
-                      <span className="w-12 text-sm">{weight.toFixed(2)}</span>
+              </div>
+              <div className="p-4 space-y-4">
+                <h2 className="text-2xl font-semibold mb-4">
+                  Group Members Skill Level
+                </h2>
+                {groupMembers.map((member) => {
+                  const { user } = member;
+                  return (
+                    <div
+                      key={user.user_id}
+                      className="flex items-center justify-between border p-3 rounded-md"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-bold">
+                          {user.first_name} {user.last_name}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {user.username}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <Slider
+                          value={[skillLevels[user.user_id]]}
+                          min={1}
+                          max={5}
+                          step={1}
+                          onValueChange={(value) =>
+                            handleSliderChange(user.user_id, value[0])
+                          }
+                          className="w-32"
+                        />
+                        <span>{skillLevels[user.user_id]}</span>
+                      </div>
+                      <Dialog
+                        open={showSuccessDialog}
+                        onOpenChange={setShowSuccessDialog}
+                      >
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Update Status</DialogTitle>
+                            <DialogDescription>
+                              {successMessage}
+                            </DialogDescription>
+                          </DialogHeader>
+                          <DialogFooter>
+                            <Button onClick={() => setShowSuccessDialog(false)}>
+                              Close
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                     </div>
-                  ))}
+                  );
+                })}
+                <div className="flex justify-end">
+                  <Button
+                    onClick={saveSkillLevel}
+                    className="px-4 py-2 bg-blue-500 text-white rounded"
+                  >
+                    Save All
+                  </Button>
                 </div>
-                <Button onClick={handleSaveWeights} className="mt-2 w-full">
-                  Save Weights
-                </Button>
-                {error && <p className="mt-2 text-red-500 text-sm">{error}</p>}
               </div>
             </div>
           )}
