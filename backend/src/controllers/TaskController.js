@@ -207,7 +207,7 @@ const getTasksByUserId = async (req, res) => {
       return res.status(404).json({ message: "No tasks found for this user." });
     }
 
-    const formattedTasks = tasks.map((task) => {
+ const formattedTasks = tasks.map((task) => {
       const taskTo = task.assignedToUser
         ? `${task.assignedToUser.first_name} ${task.assignedToUser.last_name}`
         : null;
