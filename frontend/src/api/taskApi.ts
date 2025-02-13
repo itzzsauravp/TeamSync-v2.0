@@ -75,7 +75,7 @@ async function listAllGroupsTasks() {
   }
 }
 
-async function listAllGroupsTasks() {
+/* async function listAllGroupsTasks() {
   try {
     const response = await axiosInstance.get("task/user-group-task");
     const { data } = response;
@@ -84,7 +84,7 @@ async function listAllGroupsTasks() {
     console.error("Error fetching all the group's tasks:", error);
     return { success: false, error };
   }
-}
+} */
 
 export {
   addTask,
