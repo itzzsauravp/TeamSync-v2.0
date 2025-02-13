@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { fetchAllGroups } from "../api/groupApi";
 import { fetchAdminGroups } from "../api/groupMemberApi";
-import { listGroupTasksApi, createTaskApi } from "../api/taskApi.js";
+import { listGroupTasksApi, createTaskApi, assignTaskApi } from "../api/taskApi.js";
+import { updateWeights } from "../api/groupApi";
 import solver from "../../algoSolver.js";
+import Test from "../pages/Test";
+import TaskEdit from "./TaskEdit.js";
 
 // Import shadcn UI components
 import {
@@ -17,6 +20,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CloudCog } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
+import { Settings } from "lucide-react";
 
 // Define a Group type based on the API response
 interface Group {
@@ -39,6 +44,13 @@ interface Task {
   estimated_time: number;
 }
 
+const weightLabels = [
+  "Skill",
+  "Experties",
+  "Task Priority",
+  "User Availability",
+];
+
 const GroupTask: React.FC = () => {
   // Group selection state
   const [groups, setGroups] = useState<Group[]>([]);
@@ -46,6 +58,8 @@ const GroupTask: React.FC = () => {
   const [isGroupDialogOpen, setIsGroupDialogOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [groupMembers, setGroupMembers] = useState<any[]>([]);
+  const [weights, setWeights] = useState<number[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   // Task state and form fields
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -67,7 +81,29 @@ const GroupTask: React.FC = () => {
   const [selectAllTasks, setSelectAllTasks] = useState<boolean>(false);
 
   // NEW: Recommended assignment state (returned from the solver)
-  const [recommendedAssignments, setRecommendedAssignments] = useState<any[]>([]);
+  const [recommendedAssignments, setRecommendedAssignments] = useState<any[]>(
+    []
+  );
+  const [isWeightsVisible, setIsWeightsVisible] = useState<boolean>(false);
+
+  const [editingTask, setEditingTask] = useState<Task | null>(null); // State for editing task
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+  };
+  // Function to handle task delete
+  const handleDeleteTask = (taskId: string) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this task?"
+    );
+    if (confirmDelete) {
+      // Add your custom delete logic here, e.g., calling an API
+      console.log(`Deleting task with ID: ${taskId}`);
+      // After successful deletion, update the tasks state:
+      setTasks((prevTasks) =>
+        prevTasks.filter((task) => task.task_id !== taskId)
+      );
+    }
+  };
 
   // Load groups when the component mounts
   useEffect(() => {
@@ -75,7 +111,9 @@ const GroupTask: React.FC = () => {
       try {
         let data = await fetchAdminGroups();
         // Filter groups with more than 2 members
-        data = data.groups.filter((item: any) => item.groupMembers.length !== 2);
+        data = data.groups.filter(
+          (item: any) => item.groupMembers.length !== 2
+        );
         console.log(data);
 
         if (data && Array.isArray(data)) {
@@ -92,6 +130,30 @@ const GroupTask: React.FC = () => {
     loadGroups();
   }, []);
 
+  const handleExpertisePriority = () => {
+    setWeights([1, 2, 1, 1]); // Example: High Experties
+    // alert("Weights set to Expertise Priority");
+  };
+
+  const handleSkillPriority = () => {
+    setWeights([2, 1, 1, 1]); // Example: High Skill
+    // alert("Weights set to Skill Priority");
+  };
+
+  const handleTaskPriorityPreset = () => {
+    setWeights([1, 1, 2, 1]); // Example: High Task Priority
+    // alert("Weights set to Task Priority");
+  };
+
+  const handleUserAvailabilityPreset = () => {
+    setWeights([1, 1, 1, 2]); // Example: High User Availability
+    // alert("Weights set to User Availability Priority");
+  };
+
+  const toggleWeightsVisibility = () => {
+    setIsWeightsVisible(!isWeightsVisible);
+  };
+
   // Handle group selection
   const handleGroupSelect = (group: Group) => {
     setSelectedGroup(group);
@@ -104,13 +166,37 @@ const GroupTask: React.FC = () => {
     setRecommendedAssignments([]);
   };
 
+  const handleWeightChange = (index: number, newValue: number) => {
+    const newWeights = [...weights];
+    newWeights[index] = newValue;
+    setWeights(newWeights);
+  };
+  const handleSaveWeights = async () => {
+    // const total = weights.reduce((acc, cur) => acc + cur, 0);
+    // if (total > 2) {
+    //   setError("The weights cannot be more than 2.");
+    //   return;
+    // }
+    setError(null);
+    const weightString = weights.join(",");
+    try {
+      await updateWeights(selectedGroup.group_id, weightString);
+      alert("Weights updated successfully!");
+    } catch (err) {
+      console.error("Error updating weights", err);
+      alert("Error updating weights");
+    }
+  };
+
   // Load group members using the API response structure
   useEffect(() => {
     if (selectedGroup) {
       const loadGroupMembers = async () => {
         try {
           const groupsData = await fetchAdminGroups();
-          console.log(groupsData);
+          // console.log(groupsData);
+          console.log("das ist selected Group");
+          console.log(selectedGroup);
           const groupObj = groupsData.groups.find(
             (x: any) => x.group_id === selectedGroup.group_id
           );
@@ -142,6 +228,16 @@ const GroupTask: React.FC = () => {
       };
       loadGroupTasks();
     }
+  }, [selectedGroup]);
+
+  // load weight
+  useEffect(() => {
+    if (!selectedGroup) return;
+    if (!selectedGroup.weight) {
+      setWeights([1, 1, 1, 1]);
+    }
+    let tempWeights = selectedGroup.weight.split(",").map(Number);
+    setWeights(tempWeights);
   }, [selectedGroup]);
 
   // Handle new task submission
@@ -212,22 +308,64 @@ const GroupTask: React.FC = () => {
 
   // Approve a recommended assignment. This updates the task to mark it as assigned,
   // then removes the recommendation from the list.
-  const handleApproveAssignment = (index: number) => {
-    const assignment = recommendedAssignments[index];
-    // Update tasks state: mark the task as assigned to the user returned from the solver
-    setTasks((prevTasks) =>
-      prevTasks.map((task) => {
-        if (task.task_id === assignment.task.task_id) {
+  
+  // const handleApproveAssignment = (index: number) => {
+  //   const assignment = recommendedAssignments[index];
+  //   // Update tasks state: mark the task as assigned to the user returned from the solver
+  //   setTasks((prevTasks) =>
+  //     prevTasks.map((task) => {
+  //       if (task.task_id === assignment.task.task_id) {
+  //         console.log("call the function to assign here");
+  //         console.log(assignment);
+  //         const result = await assignTaskApi(assignment.task.task_id, assignment.user.user_id);
+          
+  //         return {
+  //           ...task,
+  //           assigned_to: assignment.user.user_id,
+  //           status: "assigned",
+  //         };
+  //       }
+  //       return task;
+  //     })
+  //   );
+  //   // Remove the approved assignment from the recommended list
+  //   setRecommendedAssignments((prev) => prev.filter((_, i) => i !== index));
+  // };
+  const handleApproveAssignment = async (index: number) => {
+        const assignment = recommendedAssignments[index];
+        if (!assignment) {
+          console.error("Assignment not found at index:", index);
+          return; // Exit if assignment is not found
+        }
+    
+        try {
           console.log("call the function to assign here");
           console.log(assignment);
-          return { ...task, assigned_to: assignment.user.user_id, status: "assigned" };
+          const result = await assignTaskApi(assignment.task.task_id, assignment.user.user_id);
+          console.log("assignTaskApi result:", result); // Log the result of the API call
+    
+          // Update tasks state: mark the task as assigned to the user returned from the solver
+          setTasks((prevTasks) =>
+            prevTasks.map((task) => {
+              if (task.task_id === assignment.task.task_id) {
+                return {
+                  ...task,
+                  assigned_to: assignment.user.user_id,
+                  status: "assigned",
+                };
+              }
+              return task;
+             })
+          );
+    
+          // Remove the approved assignment from the recommended list
+          setRecommendedAssignments((prev) => prev.filter((_, i) => i !== index));
+    
+        } catch (error) {
+          console.error("Error assigning task:", error);
+          // Handle error appropriately, e.g., show an error message to the user
         }
-        return task;
-      })
-    );
-    // Remove the approved assignment from the recommended list
-    setRecommendedAssignments((prev) => prev.filter((_, i) => i !== index));
-  };
+      }; 
 
   // Dismiss a recommended assignment (remove it from the recommended list)
   const handleDismissAssignment = (index: number) => {
@@ -278,54 +416,33 @@ const GroupTask: React.FC = () => {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      {selectedGroup ? (
+      {!selectedGroup && <Test setSelectedGroup={setSelectedGroup} />}
+      {selectedGroup && (
         <div>
+          <Button onClick={() => setSelectedGroup(null)}>Change Group</Button>
+          <br />
+          <br />
           {/* Selected Group Header */}
           <div className="mb-6 flex items-center justify-between bg-white p-4 rounded shadow">
             <div className="flex items-center">
               <CloudCog className="w-6 h-6 mr-2 text-blue-500" />
               <div>
-                <h2 className="text-xl font-bold">Selected Group</h2>
-                <p className="text-gray-600">{selectedGroup.group_name}</p>
+                <h2 className="text-xl font-bold">
+                  {selectedGroup.group_name}
+                </h2>
+                <p className="text-gray-600">
+                  Created:{" "}
+                  {new Date(selectedGroup.createdAt).toLocaleDateString()}
+                </p>
               </div>
             </div>
-            <Dialog
-              open={isGroupDialogOpen}
-              onOpenChange={setIsGroupDialogOpen}
-            >
-              <DialogTrigger asChild>
-                <Button variant="primary">Change Group</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Select a Group</DialogTitle>
-                </DialogHeader>
-                <div className="mt-4 space-y-2">
-                  {loading ? (
-                    <p>Loading groups...</p>
-                  ) : (
-                    groups.map((group) => (
-                      <Button
-                        key={group.group_id}
-                        onClick={() => handleGroupSelect(group)}
-                        variant="outline"
-                        className="w-full"
-                      >
-                        {group.group_name || "Unnamed Group"}
-                      </Button>
-                    ))
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
           </div>
 
           {/* Add Task Dialog */}
           <div className="mb-4">
-          add being able to change the weights of group
             <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="secondary">Add Task</Button>
+                <Button variant="outline">Add Task</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -476,8 +593,18 @@ const GroupTask: React.FC = () => {
                           />
                         </td>
                         <td className="px-4 py-2">{member.user.first_name}</td>
-                        <td className="px-4 py-2">Black</td> {/* Placeholder */}
-                        <td className="px-4 py-2">Black</td> {/* Placeholder */}
+                        <td className="px-4 py-2">
+                          {member.user.skillLevel}
+                        </td>{" "}
+                        {/* Placeholder */}
+                        <td className="px-4 py-2">
+                          {member.user.userBusyUntill
+                            ? new Date(
+                                member.user.userBusyUntill
+                              ).toLocaleDateString()
+                            : "none"}
+                        </td>{" "}
+                        {/* Placeholder */}
                       </tr>
                     ))}
                   </tbody>
@@ -557,16 +684,81 @@ const GroupTask: React.FC = () => {
               </div>
             )}
             <div className="mt-4">
-              <Button variant="secondary" onClick={handleAssignTasks}>
-                Click to Assign Task
-              </Button>
+              <div className="flex items-center space-x-2">
+                <Button onClick={handleAssignTasks}>
+                  Click to Assign Task
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={toggleWeightsVisibility}
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
+          {/* Weights Section with a fixed width */}
+          {isWeightsVisible && (
+            <div className="mt-6 p-4 border rounded w-64 mx-auto">
+              <div>
+                <div className="flex justify-around mb-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExpertisePriority}
+                  >
+                    Experties
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSkillPriority}
+                  >
+                    Skill
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleTaskPriorityPreset}
+                  >
+                    Task Priority
+                  </Button>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Weights</h3>
+                <div className="space-y-4">
+                  {weights.map((weight, index) => (
+                    <div key={index} className="flex items-center space-x-2">
+                      <span className="w-32 text-sm">
+                        {weightLabels[index] || `Weight ${index + 1}`}
+                      </span>
+                      <Slider
+                        value={[weight]}
+                        min={0}
+                        max={2}
+                        step={0.01}
+                        onValueChange={(val: number[]) =>
+                          handleWeightChange(index, val[0])
+                        }
+                      />
+                      <span className="w-12 text-sm">{weight.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+                <Button onClick={handleSaveWeights} className="mt-2 w-full">
+                  Save Weights
+                </Button>
+                {error && <p className="mt-2 text-red-500 text-sm">{error}</p>}
+              </div>
+            </div>
+          )}
 
           {/* Recommended Assignments Table */}
           {recommendedAssignments.length > 0 && (
             <div className="mt-4 bg-white p-4 rounded shadow">
-              <h3 className="text-lg font-bold mb-2">Recommended Assignments</h3>
+              <h3 className="text-lg font-bold mb-2">
+                Recommended Assignments
+              </h3>
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-100">
                   <tr>
@@ -583,7 +775,7 @@ const GroupTask: React.FC = () => {
                       User Name
                     </th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      User ID
+                      User Busy Until
                     </th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
@@ -595,21 +787,34 @@ const GroupTask: React.FC = () => {
                     <tr key={index}>
                       <td className="px-4 py-2">{assignment.task.task_name}</td>
                       <td className="px-4 py-2">
-                        {new Date(assignment.task.due_date).toLocaleDateString()}
+                        {new Date(
+                          assignment.task.due_date
+                        ).toLocaleDateString()}
                       </td>
-                      <td className="px-4 py-2">{assignment.task.taskSkillLevel}</td>
-                      <td className="px-4 py-2">{assignment.user.first_name}</td>
-                      <td className="px-4 py-2">{assignment.user.user_id}</td>
+                      <td className="px-4 py-2">
+                        {assignment.task.taskSkillLevel}
+                      </td>
+                      <td className="px-4 py-2">
+                        {assignment.user.first_name}
+                      </td>
+                      <td className="px-4 py-2">
+                        {assignment.user.userBusyUntill
+                          ? new Date(
+                              assignment.user.userBusyUntill
+                            ).toLocaleDateString()
+                          : "none"}
+                      </td>
                       <td className="px-4 py-2">
                         <Button
                           variant="secondary"
                           size="sm"
                           onClick={() => handleApproveAssignment(index)}
+                          className="bg-green-500"
                         >
                           Approve
                         </Button>
                         <Button
-                          variant="outline"
+                          variant="destructive"
                           size="sm"
                           onClick={() => handleDismissAssignment(index)}
                           className="ml-2"
@@ -638,6 +843,9 @@ const GroupTask: React.FC = () => {
                         Task Name
                       </th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        User Name
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Deadline
                       </th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -647,7 +855,7 @@ const GroupTask: React.FC = () => {
                         Status
                       </th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Assigned To
+                        Actions
                       </th>
                     </tr>
                   </thead>
@@ -657,13 +865,29 @@ const GroupTask: React.FC = () => {
                       .map((task) => (
                         <tr key={task.task_id}>
                           <td className="px-4 py-2">{task.task_name}</td>
+                          <td className="px-4 py-2">{task.assigned_to}</td>
                           <td className="px-4 py-2">
                             {new Date(task.due_date).toLocaleDateString()}
                           </td>
                           <td className="px-4 py-2">{task.taskSkillLevel}</td>
                           <td className="px-4 py-2">{task.status}</td>
                           <td className="px-4 py-2 text-gray-900">
-                            {task.assigned_to}
+                            <td className="px-4 py-2 flex space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditTask(task)}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDeleteTask(task.task_id)}
+                              >
+                                Delete
+                              </Button>
+                            </td>
                           </td>
                         </tr>
                       ))}
@@ -672,35 +896,24 @@ const GroupTask: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* Task Edit Component (Rendered when editingTask is not null) */}
+          {editingTask && (
+            <TaskEdit
+              task={editingTask}
+              onClose={() => setEditingTask(null)} // Close the edit component
+              onSave={(updatedTask) => {
+                // Update the tasks state with the edited task
+                setTasks((prevTasks) =>
+                  prevTasks.map((task) =>
+                    task.task_id === updatedTask.task_id ? updatedTask : task
+                  )
+                );
+                setEditingTask(null); // Close the edit component after saving
+              }}
+            />
+          )}
         </div>
-      ) : (
-        // Group selection dialog (if no group is selected)
-        <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="primary">Select a Group</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Select a Group</DialogTitle>
-            </DialogHeader>
-            <div className="mt-4 space-y-2">
-              {loading ? (
-                <p>Loading groups...</p>
-              ) : (
-                groups.map((group) => (
-                  <Button
-                    key={group.group_id}
-                    onClick={() => handleGroupSelect(group)}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    {group.group_name || "Unnamed Group"}
-                  </Button>
-                ))
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
       )}
     </div>
   );
