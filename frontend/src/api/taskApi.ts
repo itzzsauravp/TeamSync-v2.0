@@ -91,14 +91,22 @@ async function listAllGroupsTasks() {
 
 async function updateTaskApi(taskPayload: object, task_id: string) {
   try {
-    const response = await axiosInstance.put(
-      `/task/${task_id}`,
-      taskPayload
-    );
+    const response = await axiosInstance.put(`/task/${task_id}`, taskPayload);
     console.log(response);
     return response;
   } catch (error) {
     console.error("Error updating tasks:", error);
+    return { success: false, error };
+  }
+}
+
+async function deleteTaskApi(task_id: string) {
+  try {
+    const response = await axiosInstance.delete(`/task/${task_id}`);
+    console.log(response);
+    return response;
+  } catch (error) {
+    console.error("Error deleting tasks:", error);
     return { success: false, error };
   }
 }
@@ -113,4 +121,5 @@ export {
   listAllGroupsTasks,
   assignTaskApi,
   updateTaskApi,
+  deleteTaskApi,
 };

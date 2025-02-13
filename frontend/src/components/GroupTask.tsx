@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { fetchAllGroups } from "../api/groupApi";
 import { fetchAdminGroups } from "../api/groupMemberApi";
-import { listGroupTasksApi, createTaskApi, assignTaskApi } from "../api/taskApi.js";
+import { listGroupTasksApi, createTaskApi, assignTaskApi, deleteTaskApi } from "../api/taskApi.js";
 import { updateWeights } from "../api/groupApi";
 import solver from "../../algoSolver.js";
 import Test from "../pages/Test";
@@ -91,13 +91,14 @@ const GroupTask: React.FC = () => {
     setEditingTask(task);
   };
   // Function to handle task delete
-  const handleDeleteTask = (taskId: string) => {
+  const handleDeleteTask = async(taskId: string) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this task?"
     );
     if (confirmDelete) {
       // Add your custom delete logic here, e.g., calling an API
       console.log(`Deleting task with ID: ${taskId}`);
+      await deleteTaskApi(taskId);
       // After successful deletion, update the tasks state:
       setTasks((prevTasks) =>
         prevTasks.filter((task) => task.task_id !== taskId)
