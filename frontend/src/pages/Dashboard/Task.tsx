@@ -27,6 +27,7 @@ const Task = () => {
         const data = await listAllGroupsTasks();
         const response = await listUserTasksApi(user_id);
         setAllTasks(data);
+        console.log(data)
         setMyTasks(response.data.tasks);
       } catch (error) {
         console.error("Error fetching tasks:", error);
@@ -94,7 +95,7 @@ const Task = () => {
 
         <TabsContent value="assigned-to-me" className="mt-6">
           {filteredMyTasks.length > 0 ? (
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               {filteredMyTasks.map((task) => (
                 <TaskCard key={task.task_id} task={task} />
               ))}
@@ -108,7 +109,7 @@ const Task = () => {
 
         <TabsContent value="all-tasks" className="mt-6">
           {filteredAllTasks.length > 0 ? (
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               {filteredAllTasks.map((task) => (
                 <TaskCard key={task.task_id} task={task} />
               ))}

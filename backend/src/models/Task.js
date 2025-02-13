@@ -37,6 +37,16 @@ const Task = sequelize.define(
       onUpdate: "CASCADE",
       onDelete: "SET NULL",
     },
+    assigned_by: {
+      type: DataTypes.UUID,
+      allowNull: true, // may be be dont make this null because assigned_by is always the current users_ids
+      references: {
+        model: "users",
+        key: "user_id",
+      },
+      onUpdate: "CASCADE",
+      onDelete: "SET NULL",
+    },
     column_id: {
       type: DataTypes.UUID,
       allowNull: true,

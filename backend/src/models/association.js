@@ -34,8 +34,12 @@ function associateModels() {
 
   Groups.hasMany(Event, { foreignKey: "group_id" });
   Event.belongsTo(Groups, { foreignKey: "group_id" });
-}
 
+  Task.belongsTo(Users, { as: "assignedToUser", foreignKey: "assigned_to" });
+  Task.belongsTo(Users, { as: "assignedByUser", foreignKey: "assigned_by" });
+  Task.belongsTo(Groups, { foreignKey: "group_id" });
+}
+console.log(associateModels());
 export {
   Users,
   Groups,

@@ -12,45 +12,74 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
+import { Calendar, User, UserCheck, Users } from "lucide-react";
 
 const TaskCard = ({ task }) => {
+  const dueDate = new Date(task.due_date);
+  const currentTime = new Date();
+  const isOverdue = currentTime.getTime() >= dueDate.getTime();
+
   return (
-    <Card className="mb-6 p-4 shadow-lg border border-gray-300 rounded-lg hover:shadow-xl transition-shadow duration-300">
-      <CardHeader className="flex flex-col gap-2 bg-gradient-to-r from-gray-700 via-gray-800 to-gray-900 text-white p-4 rounded-md">
-        <CardTitle className="text-2xl font-bold">{task.task_name}</CardTitle>
-        <span
-          className={cn(
-            new Date().getTime() >= new Date(task.due_date).getTime() &&
-              "text-red-500"
-          )}
-        >
-          Due on {new Date(task.due_date).toLocaleDateString()}{" "}
-          {new Date().getTime() >= new Date(task.due_date).getTime() && (
-            <span className="font-bold">(Deadline crossed)</span>
-          )}
-        </span>
+    <Card className="mb-6 rounded-lg border border-gray-200 shadow hover:shadow-md transition-all duration-300">
+      <CardHeader className="p-4 bg-black text-white rounded-t-lg">
+        <div className="flex justify-between items-center">
+          {/* Task Title & Due Date */}
+          <div>
+            <CardTitle className="text-xl font-semibold">
+              {task.task_name}
+            </CardTitle>
+            <div className="flex items-center text-sm mt-1">
+              <Calendar className="w-4 h-4 mr-1" />
+              <span className={cn(isOverdue && "text-red-300")}>
+                Due on {dueDate.toLocaleDateString()}
+              </span>
+              {isOverdue && (
+                <span className="ml-2 font-bold text-red-300">(Overdue)</span>
+              )}
+            </div>
+          </div>
+          {/* Assigned Info */}
+          <div className="text-right text-sm">
+            <div className="flex items-center justify-end">
+              <span className="font-bold mr-2">Task Executor:</span>
+              <span>{task.taskTo || "Unassigned"}</span>
+            </div>
+            <div className="flex items-center justify-end mt-1">
+              <span className="font-bold mr-2">Task Author:</span>
+              <span>{task.taskBy || "Unknown"}</span>
+            </div>
+            <div className="flex items-center justify-end mt-1">
+              <span className="font-bold mr-2">From Group:</span>
+              <span>{task.groupName || "Unknown"}</span>
+            </div>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="bg-white p-4 rounded-b-lg">
+
+      <CardContent className="p-4">
         <Accordion type="single" collapsible className="w-full">
           <AccordionItem value="details">
-            <AccordionTrigger className="px-2 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200 transition-colors duration-200">
-              View Details
+            <AccordionTrigger className="flex items-center justify-between text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors duration-200">
+              <span>View Details</span>
             </AccordionTrigger>
-            <AccordionContent className="mt-2 text-sm text-gray-800">
-              <p className="mb-1">
-                <strong>Description:</strong> {task.description}
+            <AccordionContent className="mt-2 text-sm text-gray-600 space-y-2">
+              <p>
+                <strong>Description:</strong>{" "}
+                {task.description || "No description provided."}
               </p>
-              <p className="mb-1">
-                <strong>Expertise:</strong> {task.taskExpertise}
+              <p>
+                <strong>Expertise:</strong> {task.taskExpertise || "N/A"}
               </p>
-              <p className="mb-1">
-                <strong>Status:</strong> {task.status}
+              <p>
+                <strong>Status:</strong>{" "}
+                {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
               </p>
             </AccordionContent>
           </AccordionItem>
         </Accordion>
       </CardContent>
-      <CardFooter className="text-xs text-gray-500 border-t mt-4 pt-2">
+
+      <CardFooter className="p-3 border-t border-gray-200 text-xs text-gray-500">
         Task ID: {task.task_id}
       </CardFooter>
     </Card>

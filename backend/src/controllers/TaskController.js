@@ -1,4 +1,4 @@
-import { GroupMembers, Task } from "../models/association.js";
+import { GroupMembers, Groups, Task, Users } from "../models/association.js";
 
 const createTask = async (req, res) => {
   console.log("tyring to create task");
@@ -16,6 +16,7 @@ const createTask = async (req, res) => {
       // Provide default values for required fields
       group_id: req.body.group_id || null, // If allowed to be null
       assigned_to: req.body.assigned_to || null,
+      assigned_by: req.user.user_id,
     });
 
     res.status(201).json(task);
@@ -60,18 +61,60 @@ const deleteTask = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 const getTasksByGroup = async (req, res) => {
   try {
     const { group_id } = req.body;
     if (!group_id) {
       return res.status(400).json({ error: "group_id is required" });
     }
+
+    // Fetch tasks for the specified group.
     const tasks = await Task.findAll({
       where: { group_id },
+      include: [
+        {
+          model: Users,
+          as: "assignedToUser",
+          attributes: ["first_name", "last_name"],
+        },
+        {
+          model: Users,
+          as: "assignedByUser",
+          attributes: ["first_name", "last_name"],
+        },
+        {
+          model: Groups,
+          attributes: ["group_name"],
+        },
+      ],
     });
-    res.json(tasks);
+
+    const formattedTasks = tasks.map((task) => {
+      const taskTo = task.assignedToUser
+        ? `${task.assignedToUser.first_name} ${task.assignedToUser.last_name}`
+        : null;
+      const taskBy = task.assignedByUser
+        ? `${task.assignedByUser.first_name} ${task.assignedByUser.last_name}`
+        : null;
+      const groupName = task.Group
+        ? task.Group.group_name
+        : task.group
+        ? task.group.group_name
+        : null;
+
+      const taskData = task.toJSON();
+      delete taskData.assignedToUser;
+      delete taskData.assignedByUser;
+      delete taskData.Group;
+      delete taskData.group;
+
+      return { ...taskData, taskTo, taskBy, groupName };
+    });
+
+    res.json(formattedTasks);
   } catch (error) {
-    console.log(error);
+    console.error("Error fetching tasks by group:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -134,25 +177,61 @@ const assignUserToTask = async (req, res) => {
 
 const getTasksByUserId = async (req, res) => {
   try {
-    const { user_id } = req.body; // Assuming userId is passed as a route parameter
-
+    const { user_id } = req.body;
     if (!user_id) {
       return res.status(400).json({ message: "User ID is required." });
     }
 
+    // Fetch tasks assigned to the specified user.
     const tasks = await Task.findAll({
-      where: {
-        assigned_to: user_id,
-      },
+      where: { assigned_to: user_id },
+      include: [
+        {
+          model: Users,
+          as: "assignedToUser",
+          attributes: ["first_name", "last_name"],
+        },
+        {
+          model: Users,
+          as: "assignedByUser",
+          attributes: ["first_name", "last_name"],
+        },
+        {
+          model: Groups,
+          attributes: ["group_name"],
+        },
+      ],
     });
 
     if (!tasks || tasks.length === 0) {
       return res.status(404).json({ message: "No tasks found for this user." });
     }
 
+    const formattedTasks = tasks.map((task) => {
+      const taskTo = task.assignedToUser
+        ? `${task.assignedToUser.first_name} ${task.assignedToUser.last_name}`
+        : null;
+      const taskBy = task.assignedByUser
+        ? `${task.assignedByUser.first_name} ${task.assignedByUser.last_name}`
+        : null;
+      const groupName = task.Group
+        ? task.Group.group_name
+        : task.group
+        ? task.group.group_name
+        : null;
+
+      const taskData = task.toJSON();
+      delete taskData.assignedToUser;
+      delete taskData.assignedByUser;
+      delete taskData.Group;
+      delete taskData.group;
+
+      return { ...taskData, taskTo, taskBy, groupName };
+    });
+
     res.status(200).json({
       message: "Tasks fetched successfully for user.",
-      tasks: tasks,
+      tasks: formattedTasks,
     });
   } catch (error) {
     console.error("Error fetching tasks by user ID:", error);
@@ -161,11 +240,14 @@ const getTasksByUserId = async (req, res) => {
       error: error.message,
     });
   }
-  // this is used to get all the task of all the group that the current user is in.
 };
+
+// this is used to get all the task of all the group that the current user is in.
 const getUserGroupTasks = async (req, res) => {
   try {
     const userId = req.user.user_id;
+
+    // Retrieve all groups the current user is a member of.
     const memberships = await GroupMembers.findAll({
       where: { user_id: userId },
       attributes: ["group_id"],
@@ -176,12 +258,53 @@ const getUserGroupTasks = async (req, res) => {
         .status(404)
         .json({ message: "User is not a member of any groups." });
     }
+
+    // Fetch tasks belonging to those groups with associated users and group details.
     const tasks = await Task.findAll({
-      where: {
-        group_id: groupIds,
-      },
+      where: { group_id: groupIds },
+      include: [
+        {
+          model: Users,
+          as: "assignedToUser",
+          attributes: ["first_name", "last_name"],
+        },
+        {
+          model: Users,
+          as: "assignedByUser",
+          attributes: ["first_name", "last_name"],
+        },
+        {
+          model: Groups,
+          attributes: ["group_name"],
+        },
+      ],
     });
-    res.status(200).json({ tasks });
+
+    // Format each task: add taskTo, taskBy, groupName; remove unwanted keys.
+    const formattedTasks = tasks.map((task) => {
+      const taskTo = task.assignedToUser
+        ? `${task.assignedToUser.first_name} ${task.assignedToUser.last_name}`
+        : null;
+      const taskBy = task.assignedByUser
+        ? `${task.assignedByUser.first_name} ${task.assignedByUser.last_name}`
+        : null;
+      // Depending on Sequelize, the included group may be under "Group" or "group".
+      const groupName = task.Group
+        ? task.Group.group_name
+        : task.group
+        ? task.group.group_name
+        : null;
+
+      const taskData = task.toJSON();
+      delete taskData.assignedToUser;
+      delete taskData.assignedByUser;
+      delete taskData.Group;
+      delete taskData.group;
+
+      return { ...taskData, taskTo, taskBy, groupName };
+    });
+
+    res.status(200).json({ tasks: formattedTasks });
   } catch (error) {
     console.error("Error fetching user group tasks:", error);
     res.status(500).json({ error: error.message });

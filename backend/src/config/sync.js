@@ -14,16 +14,16 @@ associateModels();
 
 (async () => {
   try {
-    await Users.sync({ force: true });
-    await Groups.sync({ force: true });
-    await GroupMembers.sync({ force: true });
-    await Messages.sync({ force: true });
-    await TaskColumn.sync({ force: true });
-    await Task.sync({ force: true });
-    await Event.sync({ force: true });
+    await Users.sync({ alter: true });
+    await Groups.sync({ alter: true });
+    await GroupMembers.sync({ alter: true });
+    await Messages.sync({ alter: true });
+    await TaskColumn.sync({ alter: true });
+    await Task.sync({ alter: true });
+    await Event.sync({ alter: true });
 
     // Sync Kanban model last
-    await Kanban.sync({ force: true });
+    await Kanban.sync({ alter: true });
 
     console.log("Database reset complete!");
   } catch (error) {
