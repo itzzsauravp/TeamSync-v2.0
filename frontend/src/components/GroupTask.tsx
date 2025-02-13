@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { fetchAllGroups } from "../api/groupApi";
 import { fetchAdminGroups } from "../api/groupMemberApi";
 import { listGroupTasksApi, createTaskApi, assignTaskApi, deleteTaskApi } from "../api/taskApi.js";
 import { updateWeights } from "../api/groupApi";
@@ -436,7 +435,7 @@ const GroupTask: React.FC = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 min-h-screen">
       {!selectedGroup && <Test setSelectedGroup={setSelectedGroup} />}
       {selectedGroup && (
         <div>

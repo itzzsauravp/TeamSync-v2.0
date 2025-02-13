@@ -552,7 +552,7 @@ const Admin = () => {
         <TabsContent value="groups">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h2 className="text-3xl font-bold">My Groups (Admin)</h2>
+              <h2 className="text-3xl font-bold">Groups</h2>
               <p className="text-gray-600 mt-1">
                 Manage your groups and add members easily.
               </p>
@@ -583,7 +583,7 @@ const Admin = () => {
         <TabsContent value="events">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h2 className="text-3xl font-bold">My Events</h2>
+              <h2 className="text-3xl font-bold">Events</h2>
               <p className="text-gray-600 mt-1">
                 Create, update, and delete events for your groups.
               </p>
@@ -625,6 +625,14 @@ const Admin = () => {
 
         {/* TASKS TAB */}
         <TabsContent value="tasks">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h2 className="text-3xl font-bold">Tasks</h2>
+              <p className="text-gray-600 mt-1">
+                Click on the group below to assign tasks
+              </p>
+            </div>
+          </div>
           <GroupTask />
         </TabsContent>
       </Tabs>

@@ -19,6 +19,7 @@ const Task = () => {
   const [myTasks, setMyTasks] = useState([]);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [error, setError] = useState("");
   const { user_id } = useSelector(selectUser);
 
   useEffect(() => {
@@ -26,17 +27,18 @@ const Task = () => {
       try {
         const data = await listAllGroupsTasks();
         const response = await listUserTasksApi(user_id);
-        setAllTasks(data);
-        console.log(data)
-        setMyTasks(response.data.tasks);
-      } catch (error) {
-        console.error("Error fetching tasks:", error);
+        setAllTasks(data || []);
+        setMyTasks((response.data && response.data.tasks) || []);
+      } catch (err) {
+        console.error("Error fetching tasks:", err);
+        setError("Failed to fetch tasks. Please try again later.");
       }
     };
     fetchTasks();
   }, [user_id]);
 
   const filterTasks = (tasks) => {
+    if (!tasks || !Array.isArray(tasks)) return [];
     return tasks.filter((task) => {
       const matchesSearch = task.task_name
         .toLowerCase()
@@ -61,6 +63,10 @@ const Task = () => {
           </p>
         </div>
       </div>
+
+      {error && (
+        <div className="p-4 bg-red-100 text-red-700 rounded">{error}</div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-4 items-center">
         <div className="w-full sm:w-[300px]">
