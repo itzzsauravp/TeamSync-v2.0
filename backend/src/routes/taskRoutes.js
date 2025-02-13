@@ -6,8 +6,11 @@ import {
   getTasks,
   getTasksByGroup,
   assignUserToTask,
-  getTasksByUserId
+  getTasksByUserId,
+  getUserGroupTasks,
 } from "../controllers/TaskController.js";
+import authenticateJWT from "../middlewares/authenticateJWT.js";
+
 const taskRouter = Router();
 
 taskRouter.route("/").post(createTask).get(getTasks);
@@ -15,8 +18,9 @@ taskRouter.route("/").post(createTask).get(getTasks);
 taskRouter.route("/:task_id").put(updateTask).delete(deleteTask);
 
 taskRouter.post("/listByGroup", getTasksByGroup);
-taskRouter.post("/listByUser", getTasksByUserId)
+taskRouter.post("/listByUser", getTasksByUserId);
 
 taskRouter.post("/assign", assignUserToTask);
+taskRouter.get("/user-group-task", authenticateJWT, getUserGroupTasks);
 
 export default taskRouter;

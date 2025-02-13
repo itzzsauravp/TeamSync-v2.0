@@ -1,4 +1,4 @@
-import { Task } from "../models/association.js";
+import { GroupMembers, Task } from "../models/association.js";
 
 const createTask = async (req, res) => {
   console.log("tyring to create task");
@@ -62,7 +62,7 @@ const deleteTask = async (req, res) => {
 };
 const getTasksByGroup = async (req, res) => {
   try {
-    const { group_id } = req.body; 
+    const { group_id } = req.body;
     if (!group_id) {
       return res.status(400).json({ error: "group_id is required" });
     }
@@ -78,7 +78,7 @@ const getTasksByGroup = async (req, res) => {
 
 const assignUserToTask = async (req, res) => {
   try {
-    const { task_id } = req.body; 
+    const { task_id } = req.body;
     const { user_id } = req.body;
 
     if (!task_id) {
@@ -86,7 +86,9 @@ const assignUserToTask = async (req, res) => {
     }
 
     if (!user_id) {
-      return res.status(400).json({ message: "User ID is required to assign." });
+      return res
+        .status(400)
+        .json({ message: "User ID is required to assign." });
     }
 
     // Check if the task exists (optional but recommended)
@@ -102,7 +104,7 @@ const assignUserToTask = async (req, res) => {
       { assigned_to: user_id }, // Fields to update
       {
         where: {
-          task_id: task_id,    // Condition to find the task
+          task_id: task_id, // Condition to find the task
         },
       }
     );
@@ -110,21 +112,23 @@ const assignUserToTask = async (req, res) => {
     if (updatedTask[0] === 0) {
       // updatedTask is an array, and the first element is the number of rows affected.
       // If it's 0, no rows were updated, which might mean task not found again (unlikely here)
-      return res.status(404).json({ message: "Task not found or no changes applied." }); // More generic message
+      return res
+        .status(404)
+        .json({ message: "Task not found or no changes applied." }); // More generic message
     }
 
     // Fetch the updated task to return in the response (optional)
     const fetchedUpdatedTask = await Task.findByPk(task_id);
 
-
     res.status(200).json({
       message: "User assigned to task successfully.",
       task: fetchedUpdatedTask, // Optionally return the updated task
     });
-
   } catch (error) {
     console.error("Error assigning user to task:", error);
-    res.status(500).json({ message: "Error assigning user to task.", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error assigning user to task.", error: error.message });
   }
 };
 
@@ -157,7 +161,40 @@ const getTasksByUserId = async (req, res) => {
       error: error.message,
     });
   }
+  // this is used to get all the task of all the group that the current user is in.
+};
+const getUserGroupTasks = async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+    const memberships = await GroupMembers.findAll({
+      where: { user_id: userId },
+      attributes: ["group_id"],
+    });
+    const groupIds = memberships.map((membership) => membership.group_id);
+    if (groupIds.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "User is not a member of any groups." });
+    }
+    const tasks = await Task.findAll({
+      where: {
+        group_id: groupIds,
+      },
+    });
+    res.status(200).json({ tasks });
+  } catch (error) {
+    console.error("Error fetching user group tasks:", error);
+    res.status(500).json({ error: error.message });
+  }
 };
 
-
-export { createTask, getTasks, updateTask, deleteTask, getTasksByGroup, assignUserToTask, getTasksByUserId};
+export {
+  createTask,
+  getTasks,
+  updateTask,
+  deleteTask,
+  getTasksByGroup,
+  assignUserToTask,
+  getTasksByUserId,
+  getUserGroupTasks,
+};

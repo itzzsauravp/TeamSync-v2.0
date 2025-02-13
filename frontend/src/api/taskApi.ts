@@ -55,6 +55,17 @@ async function listUserTasksApi(user_id) {
   }
 }
 
+async function listAllGroupsTasks() {
+  try {
+    const response = await axiosInstance.get("task/user-group-task");
+    const { data } = response;
+    return data.tasks;
+  } catch (error) {
+    console.error("Error fetching all the group's tasks:", error);
+    return { success: false, error };
+  }
+}
+
 export {
   addTask,
   removeTask,
@@ -62,4 +73,5 @@ export {
   createTaskApi,
   listGroupTasksApi,
   listUserTasksApi,
+  listAllGroupsTasks,
 };
