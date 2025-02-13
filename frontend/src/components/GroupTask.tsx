@@ -758,124 +758,134 @@ const GroupTask: React.FC = () => {
           </div>
           {/* Weights Section with a fixed width */}
           {isWeightsVisible && (
-            <div>
-              <div className="mt-6 p-4 border rounded w-64 mx-auto">
-                <div>
-                  <div className="flex justify-around mb-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleExpertisePriority}
-                    >
-                      Experties
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleSkillPriority}
-                    >
-                      Skill
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleTaskPriorityPreset}
-                    >
-                      Task Priority
-                    </Button>
-                  </div>
-                  <h3 className="text-lg font-semibold mb-2">Weights</h3>
-                  <div className="space-y-4">
-                    {weights.map((weight, index) => (
-                      <div key={index} className="flex items-center space-x-2">
-                        <span className="w-32 text-sm">
-                          {weightLabels[index] || `Weight ${index + 1}`}
-                        </span>
-                        <Slider
-                          value={[weight]}
-                          min={0}
-                          max={2}
-                          step={0.01}
-                          onValueChange={(val: number[]) =>
-                            handleWeightChange(index, val[0])
-                          }
-                        />
-                        <span className="w-12 text-sm">
-                          {weight.toFixed(2)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <Button onClick={handleSaveWeights} className="mt-2 w-full">
-                    Save Weights
+            <div className="space-y-8">
+              {/* Weights Section */}
+              <div className="bg-white shadow-lg rounded-lg p-6 max-w-md mx-auto">
+                <div className="flex justify-around mb-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExpertisePriority}
+                  >
+                    Expertise
                   </Button>
-                  {error && (
-                    <p className="mt-2 text-red-500 text-sm">{error}</p>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSkillPriority}
+                  >
+                    Skill
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleTaskPriorityPreset}
+                  >
+                    Task Priority
+                  </Button>
                 </div>
+                <h3 className="text-xl font-semibold text-center mb-4">
+                  Weights
+                </h3>
+                <div className="space-y-4">
+                  {weights.map((weight, index) => (
+                    <div key={index} className="flex items-center space-x-4">
+                      <span className="w-32 text-sm text-gray-700">
+                        {weightLabels[index] || `Weight ${index + 1}`}
+                      </span>
+                      <Slider
+                        value={[weight]}
+                        min={0}
+                        max={2}
+                        step={0.01}
+                        onValueChange={(val: number[]) =>
+                          handleWeightChange(index, val[0])
+                        }
+                        className="flex-1"
+                      />
+                      <span className="w-12 text-sm text-gray-700">
+                        {weight.toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <Button onClick={handleSaveWeights} className="mt-6 w-full">
+                  Save Weights
+                </Button>
+                {error && (
+                  <p className="mt-2 text-red-500 text-sm text-center">
+                    {error}
+                  </p>
+                )}
               </div>
-              <div className="p-4 space-y-4">
-                <h2 className="text-2xl font-semibold mb-4">
+
+              {/* Group Members Skill Level Section */}
+              <div className="bg-white shadow-lg rounded-lg p-6 max-w-2xl mx-auto">
+                <h2 className="text-2xl font-semibold mb-6 text-center">
                   Group Members Skill Level
                 </h2>
-                {groupMembers.map((member) => {
-                  const { user } = member;
-                  return (
-                    <div
-                      key={user.user_id}
-                      className="flex items-center justify-between border p-3 rounded-md"
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-bold">
-                          {user.first_name} {user.last_name}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {user.username}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-4">
-                        <Slider
-                          value={[skillLevels[user.user_id]]}
-                          min={1}
-                          max={5}
-                          step={1}
-                          onValueChange={(value) =>
-                            handleSliderChange(user.user_id, value[0])
-                          }
-                          className="w-32"
-                        />
-                        <span>{skillLevels[user.user_id]}</span>
-                      </div>
-                      <Dialog
-                        open={showSuccessDialog}
-                        onOpenChange={setShowSuccessDialog}
+                <div className="space-y-4">
+                  {groupMembers.map((member) => {
+                    const { user } = member;
+                    return (
+                      <div
+                        key={user.user_id}
+                        className="flex items-center justify-between border border-gray-200 p-4 rounded-md"
                       >
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Update Status</DialogTitle>
-                            <DialogDescription>
-                              {successMessage}
-                            </DialogDescription>
-                          </DialogHeader>
-                          <DialogFooter>
-                            <Button onClick={() => setShowSuccessDialog(false)}>
-                              Close
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-                  );
-                })}
-                <div className="flex justify-end">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-gray-800">
+                            {user.first_name} {user.last_name}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            {user.username}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <Slider
+                            value={[skillLevels[user.user_id]]}
+                            min={1}
+                            max={5}
+                            step={1}
+                            onValueChange={(value) =>
+                              handleSliderChange(user.user_id, value[0])
+                            }
+                            className="w-32"
+                          />
+                          <span className="text-gray-700 font-medium">
+                            {skillLevels[user.user_id]}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex justify-end mt-6">
                   <Button
                     onClick={saveSkillLevel}
-                    className="px-4 py-2 bg-blue-500 text-white rounded"
+                    className="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
                   >
                     Save All
                   </Button>
                 </div>
               </div>
+
+              {/* Success Dialog */}
+              <Dialog
+                open={showSuccessDialog}
+                onOpenChange={setShowSuccessDialog}
+              >
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Update Status</DialogTitle>
+                    <DialogDescription>{successMessage}</DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button onClick={() => setShowSuccessDialog(false)}>
+                      Close
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           )}
 
