@@ -5,6 +5,7 @@ import { UserState } from "@/store/userSlice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { expertiseOptions } from "@/assets/data";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -55,9 +56,6 @@ const Settings = () => {
   });
 
   const navigate = useNavigate();
-
-  // Expertise options available to add.
-  const expertiseOptions = ["Frontend", "Backend", "UI/UX", "ML", "AI"];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
