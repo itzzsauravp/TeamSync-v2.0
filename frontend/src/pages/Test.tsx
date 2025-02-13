@@ -52,7 +52,7 @@ const MemberItem = ({ member }: { member: Member }) => {
   );
 };
 
-const Test = () => {
+const Test = ({setSelectedGroup}) => {
   const [adminGroups, setAdminGroups] = useState<Group[]>([]);
 
   useEffect(() => {
@@ -69,12 +69,13 @@ const Test = () => {
     <div className="p-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {adminGroups.map((group) => (
-          <Link
-            key={group.group_id}
-            to={`/dashboard/group/${group.group_id}`}
-            state={{ group }}
-          >
-            <Card className="hover:shadow-lg transition-shadow duration-200 w-[300px] cursor-pointer">
+          // <Link
+          //   key={group.group_id}
+          //   to={`/dashboard/group/${group.group_id}`}
+          //   state={{ group }}
+          // >
+            <Card className="hover:shadow-lg transition-shadow duration-200 w-[300px] cursor-pointer"
+            onClick={()=>{setSelectedGroup(group)}}>
               <CardHeader className="flex flex-col justify-between items-start text-left">
                 <div>
                   <CardTitle className="text-xl font-semibold">
@@ -100,7 +101,7 @@ const Test = () => {
                 </div>
               </CardContent>
             </Card>
-          </Link>
+          // </Link>
         ))}
       </div>
     </div>

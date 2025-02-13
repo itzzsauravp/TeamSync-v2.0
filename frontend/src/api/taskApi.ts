@@ -37,7 +37,7 @@ async function createTaskApi(taskPayload) {
 async function listGroupTasksApi(group_id) {
   try {
     const response = await axiosInstance.post("task/listByGroup", { group_id });
-    console.log("this is api from frontend");
+    // console.log("this is api from frontend");
     return { success: true, data: response.data };
   } catch (error) {
     console.error("Error fetching group tasks:", error);
@@ -47,10 +47,20 @@ async function listGroupTasksApi(group_id) {
 async function listUserTasksApi(user_id) {
   try {
     const response = await axiosInstance.post("task/listByUser", { user_id });
-    console.log("this is api from frontend");
+    // console.log("this is api from frontend");
     return { success: true, data: response.data };
   } catch (error) {
-    console.error("Error fetching group tasks:", error);
+    console.error("Error fetching user tasks:", error);
+    return { success: false, error };
+  }
+}
+async function assignTaskApi(user_id, task_id){
+  try {
+    const response = await axiosInstance.post("task/assign", { user_id, task_id});
+    // console.log("this is api from frontend");
+    return { success: true, data: response.data };
+  } catch (error) {
+    console.error("Error assigning task to user:", error);
     return { success: false, error };
   }
 }
@@ -62,4 +72,5 @@ export {
   createTaskApi,
   listGroupTasksApi,
   listUserTasksApi,
+  assignTaskApi
 };
