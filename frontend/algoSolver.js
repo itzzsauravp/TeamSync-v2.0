@@ -31,8 +31,8 @@ async function solver(selectedUsers, selectedTasks, selectedGroup) {
   }
   console.log("selectedTask", tasks);
 
-  let groupWeight = selectedGroup.weight;
-  if (groupWeight.length == 0 || !groupWeight) {
+  let groupWeight = selectedGroup.weight || "1,1,1,1";
+  if (groupWeight.length == 0 || !groupWeight || groupWeight == null) {
     groupWeight = [1, 1, 1, 1];
   } else {
     groupWeight = groupWeight.split(",").map(Number);
@@ -78,18 +78,18 @@ async function solver(selectedUsers, selectedTasks, selectedGroup) {
   let limit = selectedTasks.length - 1;
   result = removeNumbersAboveLimit(result, limit);
   console.log(result);
-    
-  let returnTable = []; 
-    
-  for (let usr of result){
-    for (let tsk of usr){
-        returnTable.push({
-            task: tasks[tsk],
-            user: users[usr]
-        })
+
+  let returnTable = [];
+
+  for (let usr of result) {
+    for (let tsk of usr) {
+      returnTable.push({
+        task: tasks[tsk],
+        user: users[usr],
+      });
     }
   }
-console.log(returnTable);
+  console.log(returnTable);
   return returnTable;
 }
 
@@ -125,8 +125,14 @@ async function userAvailability(user, task) {
 }
 
 function expertiseCost(user, task) {
-  let userExpertise = user.userExpertise.split(",").map((item) => item.trim());
-  let taskExpertise = task.taskExpertise.split(",").map((item) => item.trim());
+  let userExpertise = "";
+  if (user.userExpertise) {
+    userExpertise = user.userExpertise.split(",").map((item) => item.trim());
+  }
+  let taskExpertise = "";
+  if (task.taskExpertise) {
+    taskExpertise = task.taskExpertise.split(",").map((item) => item.trim());
+  }
 
   const currentExpertiseSet = new Set(userExpertise);
 

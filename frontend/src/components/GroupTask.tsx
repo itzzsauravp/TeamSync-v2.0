@@ -58,7 +58,7 @@ const GroupTask: React.FC = () => {
   const [isGroupDialogOpen, setIsGroupDialogOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [groupMembers, setGroupMembers] = useState<any[]>([]);
-  const [weights, setWeights] = useState<number[]>([]);
+  const [weights, setWeights] = useState<number[]>([1,1,1,1]);
   const [error, setError] = useState<string | null>(null);
 
   // Task state and form fields
@@ -233,8 +233,9 @@ const GroupTask: React.FC = () => {
   // load weight
   useEffect(() => {
     if (!selectedGroup) return;
-    if (!selectedGroup.weight) {
+    if (!selectedGroup.weight  || selectedGroup.weight == null) {
       setWeights([1, 1, 1, 1]);
+      return;
     }
     let tempWeights = selectedGroup.weight.split(",").map(Number);
     setWeights(tempWeights);
@@ -341,7 +342,7 @@ const GroupTask: React.FC = () => {
         try {
           console.log("call the function to assign here");
           console.log(assignment);
-          const result = await assignTaskApi(assignment.task.task_id, assignment.user.user_id);
+          const result = await assignTaskApi( assignment.user.user_id,assignment.task.task_id);
           console.log("assignTaskApi result:", result); // Log the result of the API call
     
           // Update tasks state: mark the task as assigned to the user returned from the solver
@@ -513,7 +514,7 @@ const GroupTask: React.FC = () => {
                       className="w-full"
                     />
                   </div>
-                  <div>
+                  {/* <div>
                     <Label htmlFor="difficulty" className="block mb-1">
                       Difficulty
                     </Label>
@@ -527,7 +528,7 @@ const GroupTask: React.FC = () => {
                       <option value="mid">Medium</option>
                       <option value="hard">Hard</option>
                     </select>
-                  </div>
+                  </div> */}
                   <div>
                     <Label htmlFor="description" className="block mb-1">
                       Description
