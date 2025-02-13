@@ -28,7 +28,6 @@ const MemberItem = ({ member }: { member: Member }) => {
             className="h-10 w-10 rounded-full"
           />
           <span className="text-xs">{user.username}</span>
-          
         </div>
       </TooltipTrigger>
       <TooltipContent>
@@ -52,7 +51,7 @@ const MemberItem = ({ member }: { member: Member }) => {
   );
 };
 
-const Test = ({setSelectedGroup}) => {
+const Test = ({ setSelectedGroup }) => {
   const [adminGroups, setAdminGroups] = useState<Group[]>([]);
 
   useEffect(() => {
@@ -65,7 +64,7 @@ const Test = ({setSelectedGroup}) => {
     foo();
   }, []);
 
-  return (
+  return adminGroups.length !== 0 ? (
     <div className="p-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {adminGroups.map((group) => (
@@ -74,37 +73,45 @@ const Test = ({setSelectedGroup}) => {
           //   to={`/dashboard/group/${group.group_id}`}
           //   state={{ group }}
           // >
-            <Card className="hover:shadow-lg transition-shadow duration-200 w-[300px] cursor-pointer"
-            onClick={()=>{setSelectedGroup(group)}}>
-              <CardHeader className="flex flex-col justify-between items-start text-left">
-                <div>
-                  <CardTitle className="text-xl font-semibold">
-                    {group.members.length === 2
-                      ? "Direct Message (DM)"
-                      : group.group_name}
-                  </CardTitle>
-                  <CardDescription className="text-sm text-gray-500">
-                    Created on: {new Date(group.createdAt).toLocaleDateString()}
-                  </CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="mt-2 text-left">
-                  <span className="font-semibold text-gray-700">Members:</span>
-                  <ScrollArea className="mt-2 h-16">
-                    <div className="flex gap-4">
-                      {group.members.map((member: any) => (
-                        <MemberItem key={member.id} member={member} />
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              </CardContent>
-            </Card>
+          <Card
+            className="hover:shadow-lg transition-shadow duration-200 w-[300px] cursor-pointer"
+            onClick={() => {
+              setSelectedGroup(group);
+            }}
+          >
+            <CardHeader className="flex flex-col justify-between items-start text-left">
+              <div>
+                <CardTitle className="text-xl font-semibold">
+                  {group.members.length === 2
+                    ? "Direct Message (DM)"
+                    : group.group_name}
+                </CardTitle>
+                <CardDescription className="text-sm text-gray-500">
+                  Created on: {new Date(group.createdAt).toLocaleDateString()}
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="mt-2 text-left">
+                <span className="font-semibold text-gray-700">Members:</span>
+                <ScrollArea className="mt-2 h-16">
+                  <div className="flex gap-4">
+                    {group.members.map((member: any) => (
+                      <MemberItem key={member.id} member={member} />
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            </CardContent>
+          </Card>
           // </Link>
         ))}
       </div>
     </div>
+  ) : (
+    <p className="text-lg text-center font-medium text-gray-600">
+      You are not an admin in any group. Please create a group first.
+    </p>
   );
 };
 
