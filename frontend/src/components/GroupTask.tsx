@@ -16,6 +16,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormDescription,
+} from "@/components/ui/form";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -67,6 +74,7 @@ const GroupTask: React.FC = () => {
   const [groupMembers, setGroupMembers] = useState<any[]>([]);
   const [weights, setWeights] = useState<number[]>([1,1,1,1]);
   const [error, setError] = useState<string | null>(null);
+  const [dropdownValue, setDropdownValue] = useState("");
 
   // Task state and form fields
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -87,7 +95,7 @@ const GroupTask: React.FC = () => {
   const [selectAllUsers, setSelectAllUsers] = useState<boolean>(false);
   const [selectAllTasks, setSelectAllTasks] = useState<boolean>(false);
   
-  const [selectedExpertise, setSelectedExpertise] = useState("");
+  const [selectedExpertise, setSelectedExpertise] = useState([]);
 
 
   // NEW: Recommended assignment state (returned from the solver)
@@ -119,9 +127,6 @@ const GroupTask: React.FC = () => {
   //  console.log(groupMembers);
    let result = groupMembers.find((member)=> member.user_id == id).user.username;
    return result;
-  }
-  function handleExpertiseSelect(){
-    return;
   }
 
   // Load groups when the component mounts
@@ -310,6 +315,7 @@ const GroupTask: React.FC = () => {
     setNewTaskDifficulty("easy");
     setNewTaskPriority(1);
     setNewTaskExpertise("");
+    setSelectedExpertise([]);
     setNewTaskDescription("");
     setIsTaskDialogOpen(false);
   };
@@ -533,42 +539,6 @@ const GroupTask: React.FC = () => {
                       className="w-full"
                     />
                   </div>
-                  <div className="w-full">
-                        <Select onValueChange={handleExpertiseSelect}>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select expertise to add" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {expertiseOptions.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {selectedExpertise.split(",").map((expertise, index) =>
-                          <Button
-                            key={index}
-                            type="button"
-                            variant="outline"
-                            className="text-sm flex items-center gap-1"
-                            onClick={() => {
-                              /* const newExpertise =
-                                selectedExpertise.filter(
-                                  (item) => item !== expertise
-                                );
-                              setUpdatedUserInfo({
-                                ...updatedUserInfo,
-                                userExpertise: newExpertise,
-                              }); */
-                            }}
-                          >
-                            {expertise} <span>×</span>
-                          </Button>
-                      )}
-                    </div>
                   {/* <div>
                     <Label htmlFor="difficulty" className="block mb-1">
                       Difficulty
