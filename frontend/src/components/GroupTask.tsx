@@ -10,6 +10,7 @@ import { updateWeights } from "../api/groupApi";
 import solver from "../../algoSolver.js";
 import Test from "../pages/Test";
 import TaskEdit from "./TaskEdit.js";
+import { expertiseOptions } from "@/assets/data.js";
 
 // Import shadcn UI components
 import {
@@ -21,6 +22,20 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormDescription,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,6 +82,7 @@ const GroupTask: React.FC = () => {
   const [groupMembers, setGroupMembers] = useState<any[]>([]);
   const [weights, setWeights] = useState<number[]>([1, 1, 1, 1]);
   const [error, setError] = useState<string | null>(null);
+  const [dropdownValue, setDropdownValue] = useState("");
 
   // Task state and form fields
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -86,6 +102,9 @@ const GroupTask: React.FC = () => {
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]); // Store task IDs
   const [selectAllUsers, setSelectAllUsers] = useState<boolean>(false);
   const [selectAllTasks, setSelectAllTasks] = useState<boolean>(false);
+  
+  const [selectedExpertise, setSelectedExpertise] = useState([]);
+
 
   // this will be used to update the user's skill level
   const [skillLevels, setSkillLevels] = useState({});
@@ -159,6 +178,11 @@ const GroupTask: React.FC = () => {
       );
     }
   };
+  function getUserNameFromID(id){
+  //  console.log(groupMembers);
+   let result = groupMembers.find((member)=> member.user_id == id).user.username;
+   return result;
+  }
 
   // Load groups when the component mounts
   useEffect(() => {
@@ -346,6 +370,7 @@ const GroupTask: React.FC = () => {
     setNewTaskDifficulty("easy");
     setNewTaskPriority(1);
     setNewTaskExpertise("");
+    setSelectedExpertise([]);
     setNewTaskDescription("");
     setIsTaskDialogOpen(false);
   };
@@ -630,7 +655,7 @@ const GroupTask: React.FC = () => {
                         Name
                       </th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Skill Level
+                        User Skill Level
                       </th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Busy Until
@@ -703,7 +728,7 @@ const GroupTask: React.FC = () => {
                         Deadline
                       </th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Skill Level
+                        Task Skill Level
                       </th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
@@ -1001,7 +1026,7 @@ const GroupTask: React.FC = () => {
                       .map((task) => (
                         <tr key={task.task_id}>
                           <td className="px-4 py-2">{task.task_name}</td>
-                          <td className="px-4 py-2">{task.assigned_to}</td>
+                          <td className="px-4 py-2">{getUserNameFromID(task.assigned_to)}</td>
                           <td className="px-4 py-2">
                             {new Date(task.due_date).toLocaleDateString()}
                           </td>
