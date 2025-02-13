@@ -1,6 +1,7 @@
 import hungarian from "../algo";
 import { fetchAllUsers } from "./src/api/userApi";
 import { listGroupTasksApi, listUserTasksApi } from "./src/api/taskApi";
+import { updateUserAttributes } from "./src/api/userApi";
 
 import exp from "constants";
 
@@ -126,6 +127,8 @@ async function userAvailability(user, task) {
   if (oldestTime > currTime){
     console.log("assign user", user);
     console.log(oldestTime);
+    const resp = await updateUserAttributes({userId: user.user_id, userBusyUntill: oldestTime });
+    console.log("did i assign the user the tiem" ,resp);
   }
   const diffInMs = Math.min(0, currTime.getTime() - oldestTime.getTime());
   // Convert milliseconds to days

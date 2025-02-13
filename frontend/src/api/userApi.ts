@@ -46,5 +46,14 @@ const fetchAllUsers = async () => {
     console.log("there was error getting all users");
   }
 }
+const updateUserAttributes = async(usrObj)=>{
+  try{
+    const response = await axiosInstance.put("/user/update-attributes", usrObj);
+    return response;
+  }
+  catch(e){
+    console.log("error while updating attributes", e);
+  }
+}
 
-export { updateUserInformation, deleteUser, fetchUsers, fetchAllUsers };
+export { updateUserInformation, deleteUser, fetchUsers, fetchAllUsers, updateUserAttributes };
