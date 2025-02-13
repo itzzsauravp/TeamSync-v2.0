@@ -83,7 +83,7 @@ const Task = sequelize.define(
     status: {
       type: DataTypes.ENUM("ongoing", "pending", "aborted", "complete"),
       allowNull: false,
-      defaultValue: "pending",
+      defaultValue: "ongoing",
     },
     taskQuality: {
       type: DataTypes.INTEGER,
