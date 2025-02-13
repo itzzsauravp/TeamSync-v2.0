@@ -102,9 +102,8 @@ const GroupTask: React.FC = () => {
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]); // Store task IDs
   const [selectAllUsers, setSelectAllUsers] = useState<boolean>(false);
   const [selectAllTasks, setSelectAllTasks] = useState<boolean>(false);
-  
-  const [selectedExpertise, setSelectedExpertise] = useState([]);
 
+  const [selectedExpertise, setSelectedExpertise] = useState<string[]>([]);
 
   // this will be used to update the user's skill level
   const [skillLevels, setSkillLevels] = useState({});
@@ -178,10 +177,11 @@ const GroupTask: React.FC = () => {
       );
     }
   };
-  function getUserNameFromID(id){
-  //  console.log(groupMembers);
-   let result = groupMembers.find((member)=> member.user_id == id).user.username;
-   return result;
+  function getUserNameFromID(id) {
+    //  console.log(groupMembers);
+    let result = groupMembers.find((member) => member.user_id == id).user
+      .username;
+    return result;
   }
 
   // Load groups when the component mounts
@@ -193,7 +193,6 @@ const GroupTask: React.FC = () => {
         data = data.groups.filter(
           (item: any) => item.groupMembers.length !== 2
         );
-        console.log(data);
 
         if (data && Array.isArray(data)) {
           setGroups(data);
@@ -274,8 +273,6 @@ const GroupTask: React.FC = () => {
         try {
           const groupsData = await fetchAdminGroups();
           // console.log(groupsData);
-          console.log("das ist selected Group");
-          console.log(selectedGroup);
           const groupObj = groupsData.groups.find(
             (x: any) => x.group_id === selectedGroup.group_id
           );
@@ -321,6 +318,7 @@ const GroupTask: React.FC = () => {
   }, [selectedGroup]);
 
   // Handle new task submission
+  const expertiseString = selectedExpertise.join(",");
   const handleTaskSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -330,14 +328,14 @@ const GroupTask: React.FC = () => {
       !newTaskSkillLevel ||
       !newTaskDeadline ||
       !newTaskPriority ||
-      !newTaskExpertise ||
+      selectedExpertise.length === 0 ||
       !newTaskDescription ||
       !selectedGroup?.group_id
     ) {
       alert("Please fill in all fields.");
       return;
     }
-
+    console.log(expertiseString)
     // Build the task payload using the new schema
     const taskPayload = {
       task_name: newTaskName,
@@ -346,11 +344,10 @@ const GroupTask: React.FC = () => {
       estimated_time: 1, // remind me to remove this,
       due_date: newTaskDeadline,
       taskPriority: Number(newTaskPriority),
-      taskExpertise: newTaskExpertise,
+      taskExpertise: expertiseString,
       description: newTaskDescription,
       difficulty: newTaskDifficulty,
     };
-
     try {
       const result = await createTaskApi(taskPayload);
       if (result.success) {
@@ -551,6 +548,8 @@ const GroupTask: React.FC = () => {
                     <Input
                       id="taskSkillLevel"
                       type="number"
+                      min={1}
+                      max={5}
                       value={newTaskSkillLevel}
                       onChange={(e) =>
                         setNewTaskSkillLevel(Number(e.target.value))
@@ -575,6 +574,8 @@ const GroupTask: React.FC = () => {
                       Task Priority
                     </Label>
                     <Input
+                      min={1}
+                      max={5}
                       id="taskPriority"
                       type="number"
                       value={newTaskPriority}
@@ -588,29 +589,45 @@ const GroupTask: React.FC = () => {
                     <Label htmlFor="taskExpertise" className="block mb-1">
                       Task Expertise
                     </Label>
-                    <Input
-                      id="taskExpertise"
-                      type="text"
-                      value={newTaskExpertise}
-                      onChange={(e) => setNewTaskExpertise(e.target.value)}
-                      className="w-full"
-                    />
-                  </div>
-                  {/* <div>
-                    <Label htmlFor="difficulty" className="block mb-1">
-                      Difficulty
-                    </Label>
+                    {/* Display selected expertise as chips */}
+                    {selectedExpertise.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {selectedExpertise.map((exp) => (
+                          <span
+                            key={exp}
+                            className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                          >
+                            {exp}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {/* Multi-select dropdown */}
                     <select
-                      id="difficulty"
-                      className="w-full border px-4 py-2 rounded"
-                      value={newTaskDifficulty}
-                      onChange={(e) => setNewTaskDifficulty(e.target.value)}
+                      id="taskExpertise"
+                      multiple
+                      value={selectedExpertise}
+                      className="w-full border rounded px-3 py-2"
+                      onChange={() => {}}
                     >
-                      <option value="easy">Easy</option>
-                      <option value="mid">Medium</option>
-                      <option value="hard">Hard</option>
+                      {expertiseOptions.map((option) => (
+                        <option
+                          key={option}
+                          value={option}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setSelectedExpertise((prevSelected) =>
+                              prevSelected.includes(option)
+                                ? prevSelected.filter((item) => item !== option)
+                                : [...prevSelected, option]
+                            );
+                          }}
+                        >
+                          {option}
+                        </option>
+                      ))}
                     </select>
-                  </div> */}
+                  </div>
                   <div>
                     <Label htmlFor="description" className="block mb-1">
                       Description
@@ -1026,7 +1043,9 @@ const GroupTask: React.FC = () => {
                       .map((task) => (
                         <tr key={task.task_id}>
                           <td className="px-4 py-2">{task.task_name}</td>
-                          <td className="px-4 py-2">{getUserNameFromID(task.assigned_to)}</td>
+                          <td className="px-4 py-2">
+                            {getUserNameFromID(task.assigned_to)}
+                          </td>
                           <td className="px-4 py-2">
                             {new Date(task.due_date).toLocaleDateString()}
                           </td>
