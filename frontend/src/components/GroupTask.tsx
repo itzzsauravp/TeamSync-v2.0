@@ -11,6 +11,7 @@ import solver from "../../algoSolver.js";
 import Test from "../pages/Test";
 import TaskEdit from "./TaskEdit.js";
 import { expertiseOptions } from "@/assets/data.js";
+import { updateTaskApi } from "../api/taskApi.js";
 
 // Import shadcn UI components
 import {
@@ -72,6 +73,18 @@ const weightLabels = [
   "Task Priority",
   "User Availability",
 ];
+const Star = ({ filled, onMouseEnter, onMouseLeave, onClick }) => (
+  <span
+    onMouseEnter={onMouseEnter}
+    onMouseLeave={onMouseLeave}
+    onClick={onClick}
+    className={`cursor-pointer text-4xl transition-colors duration-200 ${
+      filled ? "text-yellow-400" : "text-gray-400"
+    }`}
+  >
+    ★
+  </span>
+);
 
 const GroupTask: React.FC = () => {
   // Group selection state
@@ -102,14 +115,25 @@ const GroupTask: React.FC = () => {
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]); // Store task IDs
   const [selectAllUsers, setSelectAllUsers] = useState<boolean>(false);
   const [selectAllTasks, setSelectAllTasks] = useState<boolean>(false);
-  
+
   const [selectedExpertise, setSelectedExpertise] = useState([]);
 
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
 
   // this will be used to update the user's skill level
   const [skillLevels, setSkillLevels] = useState({});
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [reviewGroup, setReviewGroup] = useState();
+
+  const handleReviewSubmit = async () => {
+    const res = await updateTaskApi({taskQuality: rating}, reviewGroup.task_id);
+    console.log(res);
+    setRating(0);
+    setReviewOpen(false);
+  };
 
   useEffect(() => {
     const initialSkillLevels = {};
@@ -178,10 +202,11 @@ const GroupTask: React.FC = () => {
       );
     }
   };
-  function getUserNameFromID(id){
-  //  console.log(groupMembers);
-   let result = groupMembers.find((member)=> member.user_id == id).user.username;
-   return result;
+  function getUserNameFromID(id) {
+    //  console.log(groupMembers);
+    let result = groupMembers.find((member) => member.user_id == id).user
+      .username;
+    return result;
   }
 
   // Load groups when the component mounts
@@ -412,6 +437,11 @@ const GroupTask: React.FC = () => {
   //   // Remove the approved assignment from the recommended list
   //   setRecommendedAssignments((prev) => prev.filter((_, i) => i !== index));
   // };
+ function handleReviewButtonClick(groupInput){
+  setReviewOpen(true);
+  setReviewGroup(groupInput);
+ } 
+
   const handleApproveAssignment = async (index: number) => {
     const assignment = recommendedAssignments[index];
     if (!assignment) {
@@ -1010,7 +1040,7 @@ const GroupTask: React.FC = () => {
                         Deadline
                       </th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Skill Level
+                        Task Skill Level
                       </th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
@@ -1026,7 +1056,9 @@ const GroupTask: React.FC = () => {
                       .map((task) => (
                         <tr key={task.task_id}>
                           <td className="px-4 py-2">{task.task_name}</td>
-                          <td className="px-4 py-2">{getUserNameFromID(task.assigned_to)}</td>
+                          <td className="px-4 py-2">
+                            {getUserNameFromID(task.assigned_to)}
+                          </td>
                           <td className="px-4 py-2">
                             {new Date(task.due_date).toLocaleDateString()}
                           </td>
@@ -1048,6 +1080,11 @@ const GroupTask: React.FC = () => {
                               >
                                 Delete
                               </Button>
+                              {task.status == "pending" && (
+                                <Button size="sm"
+                                onClick={()=>handleReviewButtonClick(task)}
+                                >Review</Button>
+                              )}
                             </td>
                           </td>
                         </tr>
@@ -1074,6 +1111,38 @@ const GroupTask: React.FC = () => {
               }}
             />
           )}
+          <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+            <DialogTrigger asChild>
+              {/* <Button>Review Task</Button> */}
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Task Name: {reviewGroup.task_name}</DialogTitle>
+              </DialogHeader>
+              <div className="my-4">
+                <p className="mb-2 text-lg">
+                  Rating: {hoverRating || rating || 0}
+                </p>
+                <div className="flex gap-1">
+                  {Array.from({ length: 10 }, (_, index) => {
+                    const starValue = index + 1;
+                    return (
+                      <Star
+                        key={starValue}
+                        filled={starValue <= (hoverRating || rating)}
+                        onMouseEnter={() => setHoverRating(starValue)}
+                        onMouseLeave={() => setHoverRating(0)}
+                        onClick={() => setRating(starValue)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={handleReviewSubmit}>Submit</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       )}
     </div>
