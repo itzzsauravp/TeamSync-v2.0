@@ -54,9 +54,12 @@ async function listUserTasksApi(user_id) {
     return { success: false, error };
   }
 }
-async function assignTaskApi(user_id, task_id){
+async function assignTaskApi(user_id, task_id) {
   try {
-    const response = await axiosInstance.post("task/assign", { user_id, task_id});
+    const response = await axiosInstance.post("task/assign", {
+      user_id,
+      task_id,
+    });
     // console.log("this is api from frontend");
     return { success: true, data: response.data };
   } catch (error) {
@@ -86,6 +89,20 @@ async function listAllGroupsTasks() {
   }
 } */
 
+async function updateTaskApi(taskPayload: object, task_id: string) {
+  try {
+    const response = await axiosInstance.put(
+      `/task/${task_id}`,
+      taskPayload
+    );
+    console.log(response);
+    return response;
+  } catch (error) {
+    console.error("Error updating tasks:", error);
+    return { success: false, error };
+  }
+}
+
 export {
   addTask,
   removeTask,
@@ -94,5 +111,6 @@ export {
   listGroupTasksApi,
   listUserTasksApi,
   listAllGroupsTasks,
-  assignTaskApi
+  assignTaskApi,
+  updateTaskApi,
 };

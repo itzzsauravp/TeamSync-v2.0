@@ -42,7 +42,7 @@ const updateTask = async (req, res) => {
     const { task_id } = req.params;
     const [updated] = await Task.update(req.body, {
       where: { task_id },
-      returning: true, // For PostgreSQL
+      returning: true,
     });
 
     if (!updated) return res.status(404).json({ error: "Task not found" });

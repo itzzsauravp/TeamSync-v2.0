@@ -190,6 +190,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { updateTaskApi } from "@/api/taskApi";
 // import { Checkbox } from "@/components/ui/checkbox"; // Import Checkbox if needed
 // import { Slider } from "@/components/ui/slider"; // Import Slider if needed
 
@@ -215,7 +216,7 @@ interface TaskEditProps {
 
 const TaskEdit: React.FC<TaskEditProps> = ({ task, onClose, onSave }) => {
   const [editedTask, setEditedTask] = useState<Task>({ ...task });
-
+  console.log(task)
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -225,8 +226,10 @@ const TaskEdit: React.FC<TaskEditProps> = ({ task, onClose, onSave }) => {
     setEditedTask({ ...editedTask, [name]: value });
   };
 
-  const handleSave = () => {
+  const handleSave = async() => {
     onSave(editedTask);
+    console.log(editedTask, editedTask.task_id)
+    await updateTaskApi(editedTask, editedTask.task_id)
   };
 
   const handleClearAssignedTo = () => {
