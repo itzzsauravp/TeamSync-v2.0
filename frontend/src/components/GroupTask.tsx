@@ -105,6 +105,11 @@ const GroupTask: React.FC = () => {
       );
     }
   };
+  function getUserNameFromID(id){
+  //  console.log(groupMembers);
+   let result = groupMembers.find((member)=> member.user_id == id).user.username;
+   return result;
+  }
 
   // Load groups when the component mounts
   useEffect(() => {
@@ -867,7 +872,7 @@ const GroupTask: React.FC = () => {
                       .map((task) => (
                         <tr key={task.task_id}>
                           <td className="px-4 py-2">{task.task_name}</td>
-                          <td className="px-4 py-2">{task.assigned_to}</td>
+                          <td className="px-4 py-2">{getUserNameFromID(task.assigned_to)}</td>
                           <td className="px-4 py-2">
                             {new Date(task.due_date).toLocaleDateString()}
                           </td>
