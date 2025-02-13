@@ -33,20 +33,25 @@ async function createTaskApi(taskPayload) {
     console.error("Error adding task:", error);
     return { success: false, error };
   }
-  async function listGroupTasksApi(group_id) {
-    try {
-      const response = await axiosInstance.post("task/listByGroup", { group_id });
+
+async function listGroupTasksApi(group_id) {
+  try {
+    const response = await axiosInstance.post("task/listByGroup", { group_id });
+    console.log("this is api from frontend");
+    return { success: true, data: response.data };
+  } catch (error) {
+    console.error("Error fetching group tasks:", error);
+    return { success: false, error };
   }
-  async function listUserTasksApi(user_id){
-    try {
-      const response = await axiosInstance.post("task/listByUser", {user_id});
-      // console.log("this is api from frontend");
-      // console.log(response);
-      return { success: true, data: response.data };
-    } catch (error) {
-      // console.error("Error fetching user tasks:", error);
-      return { success: false, error };
-    }
+}
+async function listUserTasksApi(user_id) {
+  try {
+    const response = await axiosInstance.post("task/listByUser", { user_id });
+    console.log("this is api from frontend");
+    return { success: true, data: response.data };
+  } catch (error) {
+    console.error("Error fetching group tasks:", error);
+    return { success: false, error };
   }
 }
 
