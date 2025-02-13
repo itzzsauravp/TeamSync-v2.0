@@ -63,6 +63,7 @@ async function solver(selectedUsers, selectedTasks, selectedGroup) {
 
   if (selectedUsers.length > selectedTasks.length) {
     // padd the things boi
+    console.log("num of users less than num of tasks");
     const diff = selectedUsers.length - selectedTasks.length;
     for (let i = 0; i < costMatrix.length; i++) {
       for (let j = 0; j < diff; j++) {
@@ -74,6 +75,7 @@ async function solver(selectedUsers, selectedTasks, selectedGroup) {
   console.log("costMatrix");
   console.table(costMatrix);
   let result = hungarian(costMatrix);
+  console.log("this is the result");
   console.log(result);
   let limit = selectedTasks.length - 1;
   result = removeNumbersAboveLimit(result, limit);
@@ -81,15 +83,17 @@ async function solver(selectedUsers, selectedTasks, selectedGroup) {
 
   let returnTable = [];
 
-  for (let usr of result) {
+  for (let [usrIdx,usr] of result.entries()) {
+    console.log("this is the usr");
+    console.log(usr);
     for (let tsk of usr) {
       returnTable.push({
-        task: tasks[tsk],
-        user: users[usr],
+        task: structuredClone(tasks[tsk]),
+        user: structuredClone(users[usrIdx]),
       });
     }
   }
-  console.log(returnTable);
+  console.log("return table", returnTable);
   return returnTable;
 }
 
@@ -116,6 +120,12 @@ async function userAvailability(user, task) {
     if (taskDate > oldestTime) {
       oldestTime = taskDate;
     }
+  }
+  // console.log("for user", user);
+  // console.log("oldestTime is ", oldestTime);
+  if (oldestTime > currTime){
+    console.log("assign user", user);
+    console.log(oldestTime);
   }
   const diffInMs = Math.min(0, currTime.getTime() - oldestTime.getTime());
   // Convert milliseconds to days
