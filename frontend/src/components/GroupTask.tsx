@@ -6,6 +6,7 @@ import { updateWeights } from "../api/groupApi";
 import solver from "../../algoSolver.js";
 import Test from "../pages/Test";
 import TaskEdit from "./TaskEdit.js";
+import { expertiseOptions } from "@/assets/data.js";
 
 // Import shadcn UI components
 import {
@@ -15,6 +16,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -79,6 +87,9 @@ const GroupTask: React.FC = () => {
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]); // Store task IDs
   const [selectAllUsers, setSelectAllUsers] = useState<boolean>(false);
   const [selectAllTasks, setSelectAllTasks] = useState<boolean>(false);
+  
+  const [selectedExpertise, setSelectedExpertise] = useState("");
+
 
   // NEW: Recommended assignment state (returned from the solver)
   const [recommendedAssignments, setRecommendedAssignments] = useState<any[]>(
@@ -109,6 +120,9 @@ const GroupTask: React.FC = () => {
   //  console.log(groupMembers);
    let result = groupMembers.find((member)=> member.user_id == id).user.username;
    return result;
+  }
+  function handleExpertiseSelect(){
+    return;
   }
 
   // Load groups when the component mounts
@@ -520,6 +534,42 @@ const GroupTask: React.FC = () => {
                       className="w-full"
                     />
                   </div>
+                  <div className="w-full">
+                        <Select onValueChange={handleExpertiseSelect}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select expertise to add" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {expertiseOptions.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {selectedExpertise.split(",").map((expertise, index) =>
+                          <Button
+                            key={index}
+                            type="button"
+                            variant="outline"
+                            className="text-sm flex items-center gap-1"
+                            onClick={() => {
+                              /* const newExpertise =
+                                selectedExpertise.filter(
+                                  (item) => item !== expertise
+                                );
+                              setUpdatedUserInfo({
+                                ...updatedUserInfo,
+                                userExpertise: newExpertise,
+                              }); */
+                            }}
+                          >
+                            {expertise} <span>×</span>
+                          </Button>
+                      )}
+                    </div>
                   {/* <div>
                     <Label htmlFor="difficulty" className="block mb-1">
                       Difficulty
@@ -579,7 +629,7 @@ const GroupTask: React.FC = () => {
                         Name
                       </th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Skill Level
+                        User Skill Level
                       </th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Busy Until
@@ -652,7 +702,7 @@ const GroupTask: React.FC = () => {
                         Deadline
                       </th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Skill Level
+                        Task Skill Level
                       </th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
