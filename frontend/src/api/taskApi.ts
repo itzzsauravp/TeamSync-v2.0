@@ -33,7 +33,7 @@ async function createTaskApi(taskPayload) {
     console.error("Error adding task:", error);
     return { success: false, error };
   }
-
+}
 async function listGroupTasksApi(group_id) {
   try {
     const response = await axiosInstance.post("task/listByGroup", { group_id });
