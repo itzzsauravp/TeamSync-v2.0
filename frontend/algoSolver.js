@@ -2,6 +2,7 @@ import hungarian from "../algo";
 import { fetchAllUsers } from "./src/api/userApi";
 import { listGroupTasksApi, listUserTasksApi } from "./src/api/taskApi";
 import { updateUserAttributes } from "./src/api/userApi";
+import { fetchAllGroups } from "./src/api/groupApi";
 
 import exp from "constants";
 
@@ -32,12 +33,16 @@ async function solver(selectedUsers, selectedTasks, selectedGroup) {
   }
   console.log("selectedTask", tasks);
 
-  let groupWeight = selectedGroup.weight || "1,1,1,1";
+  let foo = await fetchAllGroups();
+  foo = foo.groups.find((g) => g.group_id == selectedGroup.group_id).weight;
+  // console.log("foo", foo);
+  let groupWeight = foo || "1,1,1,1";
   if (groupWeight.length == 0 || !groupWeight || groupWeight == null) {
     groupWeight = [1, 1, 1, 1];
   } else {
     groupWeight = groupWeight.split(",").map(Number);
   }
+  console.log("using groupWeight", groupWeight);
 
   let costMatrix = [];
   for (let user of users) {
@@ -52,14 +57,23 @@ async function solver(selectedUsers, selectedTasks, selectedGroup) {
       let priority = 1 - task.taskPriority / 5;
       let availabilit = await userAvailability(user, task);
 
-      let cost =
-        groupWeight[0] * skillCost +
-        groupWeight[1] * expCost +
-        groupWeight[2] * priority +
-        groupWeight[3] * availabilit;
+      // let cost =
+      let one = groupWeight[0] * skillCost;
+      let two = groupWeight[1] * expCost;
+      let three = groupWeight[2] * priority;
+      let four = groupWeight[3] * availabilit;
+      if(one == 0) one = 0.1;
+      if(two == 0) two = 0.1;
+      if(three == 0) three = 0.1;
+      if(four == 0) four = 0.1;
+      let cost = one + two + three + four;
+
+      if (cost == Infinity || cost == undefined) cost = 1;
+      console.log("cost", cost, user);
       userCost.push(cost);
     }
     costMatrix.push(userCost);
+    console.table(userCost);
   }
 
   if (selectedUsers.length > selectedTasks.length) {
@@ -69,7 +83,7 @@ async function solver(selectedUsers, selectedTasks, selectedGroup) {
     for (let i = 0; i < costMatrix.length; i++) {
       for (let j = 0; j < diff; j++) {
         // dont make this value too big
-        costMatrix[i].push(500);
+        costMatrix[i].push(0);
       }
     }
   }
@@ -84,7 +98,7 @@ async function solver(selectedUsers, selectedTasks, selectedGroup) {
 
   let returnTable = [];
 
-  for (let [usrIdx,usr] of result.entries()) {
+  for (let [usrIdx, usr] of result.entries()) {
     console.log("this is the usr");
     console.log(usr);
     for (let tsk of usr) {
@@ -127,11 +141,14 @@ async function userAvailability(user, task) {
   }
   // console.log("for user", user);
   // console.log("oldestTime is ", oldestTime);
-  if (oldestTime > currTime){
+  if (oldestTime > currTime) {
     console.log("assign user", user);
     console.log(oldestTime);
-    const resp = await updateUserAttributes({userId: user.user_id, userBusyUntill: oldestTime });
-    console.log("did i assign the user the tiem" ,resp);
+    const resp = await updateUserAttributes({
+      userId: user.user_id,
+      userBusyUntill: oldestTime,
+    });
+    console.log("did i assign the user the tiem", resp);
   }
   const diffInMs = Math.min(0, currTime.getTime() - oldestTime.getTime());
   // Convert milliseconds to days
@@ -144,19 +161,22 @@ function expertiseCost(user, task) {
   let userExpertise = "";
   if (user.userExpertise) {
     userExpertise = user.userExpertise.split(",").map((item) => item.trim());
+    // console.log("usetExp",userExpertise);
   }
   let taskExpertise = "";
   if (task.taskExpertise) {
     taskExpertise = task.taskExpertise.split(",").map((item) => item.trim());
+    // console.log("taskExp",taskExpertise);
   }
 
-  const currentExpertiseSet = new Set(userExpertise);
+  const currentExpertiseSet = new Set(taskExpertise);
 
   //Count the number of remaining expertise values
   let remainingCount = 0;
-  for (const expertise of taskExpertise) {
+  for (const expertise of userExpertise) {
     if (!currentExpertiseSet.has(expertise)) {
       remainingCount++;
+      // console.log("user doent have expertise", expertise);
     }
   }
 

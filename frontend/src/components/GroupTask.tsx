@@ -285,7 +285,8 @@ const GroupTask: React.FC = () => {
     setError(null);
     const weightString = weights.join(",");
     try {
-      await updateWeights(selectedGroup.group_id, weightString);
+      const res =await updateWeights(selectedGroup.group_id, weightString);
+      console.log("assign weights", res);
       alert("Weights updated successfully!");
     } catch (err) {
       console.error("Error updating weights", err);
@@ -709,6 +710,9 @@ const GroupTask: React.FC = () => {
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Busy Until
                       </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        User Expertise
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -727,7 +731,7 @@ const GroupTask: React.FC = () => {
                         <td className="px-4 py-2">{member.user.first_name}</td>
                         <td className="px-4 py-2">
                           {member.user.skillLevel}
-                        </td>{" "}
+                        </td>
                         {/* Placeholder */}
                         <td className="px-4 py-2">
                           {member.user.userBusyUntill
@@ -735,8 +739,12 @@ const GroupTask: React.FC = () => {
                                 member.user.userBusyUntill
                               ).toLocaleDateString()
                             : "none"}
-                        </td>{" "}
-                        {/* Placeholder */}
+                        </td>
+                        <td className="px-4 py-2">
+                          {member.user.userExpertise
+                            ? member.user.userExpertise
+                            : "none"}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -783,7 +791,7 @@ const GroupTask: React.FC = () => {
                         Status
                       </th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Assigned To
+                      Task Expertise
                       </th>
                     </tr>
                   </thead>
@@ -807,7 +815,7 @@ const GroupTask: React.FC = () => {
                           <td className="px-4 py-2">{task.taskSkillLevel}</td>
                           <td className="px-4 py-2">{task.status}</td>
                           <td className="px-4 py-2 text-gray-500">
-                            Unassigned
+                          {task.taskExpertise? task.taskExpertise: "none"}
                           </td>
                         </tr>
                       ))}
@@ -976,13 +984,13 @@ const GroupTask: React.FC = () => {
                       Task Name
                     </th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      User Name
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Due Date
                     </th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Skill Level
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      User Name
+                      Task Skill Level
                     </th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       User Busy Until
@@ -997,15 +1005,15 @@ const GroupTask: React.FC = () => {
                     <tr key={index}>
                       <td className="px-4 py-2">{assignment.task.task_name}</td>
                       <td className="px-4 py-2">
+                        {assignment.user.first_name}
+                      </td>
+                      <td className="px-4 py-2">
                         {new Date(
                           assignment.task.due_date
                         ).toLocaleDateString()}
                       </td>
                       <td className="px-4 py-2">
                         {assignment.task.taskSkillLevel}
-                      </td>
-                      <td className="px-4 py-2">
-                        {assignment.user.first_name}
                       </td>
                       <td className="px-4 py-2">
                         {assignment.user.userBusyUntill
